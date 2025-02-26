@@ -2,6 +2,7 @@ import { ProcessModel } from "./ProcessModel";
 import { Pattern } from "./Pattern";
 import { YarnModel } from "./YarnModel";
 import { yarnLinkForce } from "./YarnForce";
+import { GLOBAL_STATE } from "../state"
 import * as d3 from "d3";
 
 // Number of stitches to add to the left and right of the pattern
@@ -29,7 +30,8 @@ const HEIGHT_SHRINK = 0.7;
 
 const dpi = devicePixelRatio;
 
-export function simulate(pattern, yarnSequence, palette, scale) {
+export function simulate(pattern, yarnSequence, palette, scale, pan) {
+  console.log("simulation")
   let relaxed = false;
   let yarnWidth, stitchHeight, sim;
   let yarnSet = new Set(yarnSequence);
@@ -55,9 +57,9 @@ export function simulate(pattern, yarnSequence, palette, scale) {
     yarnWidth = stitchWidth * YARN_RATIO;
 
     const offsetX =
-      yarnWidth + (canvasWidth - stitchPattern.width * stitchWidth) / 2;
+      yarnWidth + (- stitchPattern.width * stitchWidth) / 2;
     const offsetY =
-      -yarnWidth + (canvasHeight - stitchPattern.height * stitchHeight) / 2;
+      -yarnWidth + (- stitchPattern.height * stitchHeight) / 2;
 
     yarnGraph.contactNodes.forEach((node, index) => {
       const i = index % yarnGraph.width;
@@ -139,7 +141,7 @@ export function simulate(pattern, yarnSequence, palette, scale) {
 
     if (index == 0 || index > yarnPathLinks.length - 3) {
       // if is the first or last link, just draw a line
-      return `M ${yarnLink.source.x} ${yarnLink.source.y} ${yarnLink.target.x} ${yarnLink.target.y}`;
+      return new Path2D(`M ${yarnLink.source.x} ${yarnLink.source.y} ${yarnLink.target.x} ${yarnLink.target.y}`);
     }
 
     const linkData = [
@@ -149,20 +151,20 @@ export function simulate(pattern, yarnSequence, palette, scale) {
       yarnPath[index + 2],
     ];
 
-    return openYarnCurve(linkData);
+    return new Path2D(openYarnCurve(linkData));
   }
 
   function sortSegments() {
     const sortedSegments = {
-      front: { border: [] },
-      back: { border: [] },
-      mid: { border: [] },
+      front: { border: new Path2D() },
+      back: { border: new Path2D() },
+      mid: { border: new Path2D() },
     };
 
     for (const color of yarnSet) {
-      sortedSegments.front[color] = [];
-      sortedSegments.back[color] = [];
-      sortedSegments.mid[color] = [];
+      sortedSegments.front[color] = new Path2D;
+      sortedSegments.back[color] = new Path2D;
+      sortedSegments.mid[color] = new Path2D;
     }
 
     return sortedSegments;
@@ -184,31 +186,73 @@ export function simulate(pattern, yarnSequence, palette, scale) {
   function drawSegmentsToLayer(context, layer) {
     context.lineWidth = yarnWidth;
 
-    Object.entries(layer).forEach(([colorIndex, paths]) => {
+    Object.entries(layer).forEach(([colorIndex, path]) => {
       context.strokeStyle = yarnPalette[colorIndex];
-      context.stroke(new Path2D(paths.join(" ")));
+      context.stroke(path);
     });
   }
 
   function draw() {
-    frontCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    midCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    backCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    let scale = GLOBAL_STATE.simScale
+    let pan   = GLOBAL_STATE.simPan
 
+    const bbox = document.getElementById("sim-container").getBoundingClientRect();
+
+    const width  = bbox.width;
+    const height = bbox.height;
+    let canvasWidth  = dpi * width;
+    let canvasHeight = dpi * height;
+
+    function getCanvases(canvasIDs) {
+      return canvasIDs.map((canvasID) => {
+        let canvas = document.getElementById(canvasID);
+        canvas.width  = canvasWidth;
+        canvas.height = canvasHeight;
+        return canvas;
+      });
+    }
+
+    let [backCanvas, midCanvas, frontCanvas] = getCanvases([
+      "back",
+      "mid",
+      "front",
+    ]);
+
+    const backCtx = backCanvas.getContext("2d");
+    const midCtx = midCanvas.getContext("2d");
+    const frontCtx = frontCanvas.getContext("2d");
+
+    for (const ctx of [frontCtx, midCtx, backCtx]) {
+      ctx.save();
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ctx.translate(canvasWidth / 2, canvasHeight / 2);
+      ctx.scale(dpi, dpi);
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(scale, scale);
+    }
+
+
+    drawSegmentsToLayer(backCtx, layers.back);
+    drawSegmentsToLayer(frontCtx, layers.front);
+    drawSegmentsToLayer(midCtx, layers.mid);
+
+    backCtx.restore()
+    midCtx.restore()
+    frontCtx.restore()
+  }
+
+  function populateLayers(){
+    layers = sortSegments();
+
+    // update normals before populating layers
     updateNormals();
-
-    const layers = sortSegments();
 
     yarnPathLinks.forEach((link, index) => {
       if (index == 0 || index > yarnPathLinks.length - 3) return;
       const colorIndex = yarnColor(link.row);
 
-      layers[link.layer][colorIndex].push(yarnCurve(link));
+      layers[link.layer][colorIndex].addPath(yarnCurve(link));
     });
-
-    drawSegmentsToLayer(backCtx, layers.back);
-    drawSegmentsToLayer(frontCtx, layers.front);
-    drawSegmentsToLayer(midCtx, layers.mid);
   }
 
   function relax() {
@@ -229,7 +273,10 @@ export function simulate(pattern, yarnSequence, palette, scale) {
           })
       )
 
-      .on("tick", draw);
+      .on("tick", () => {
+        populateLayers();
+        draw();
+      });
     relaxed = true;
   }
 
@@ -249,45 +296,25 @@ export function simulate(pattern, yarnSequence, palette, scale) {
 
   const bbox = document.getElementById("sim-container").getBoundingClientRect();
 
-  const width = bbox.width * scale;
-  const height = bbox.height * scale;
-  const canvasWidth = dpi * width;
-  const canvasHeight = dpi * height;
-
-  function getCanvases(canvasIDs) {
-    return canvasIDs.map((canvasID) => {
-      let canvas = document.getElementById(canvasID);
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      canvas.style.cssText = `width: ${width}px; height: ${height}px;`;
-      return canvas;
-    });
-  }
-
-  let [backCanvas, midCanvas, frontCanvas] = getCanvases([
-    "back",
-    "mid",
-    "front",
-  ]);
-
-  const backCtx = backCanvas.getContext("2d");
-  const midCtx = midCanvas.getContext("2d");
-  const frontCtx = frontCanvas.getContext("2d");
+  const width  = bbox.width;
+  const height = bbox.height;
+  let canvasWidth  = dpi * width;
+  let canvasHeight = dpi * height;
 
   ///////////////////////
   // BUILD SIMULATION DATA
   ///////////////////////
 
   const testModel = new ProcessModel(stitchPattern);
-
   const yarnGraph = new YarnModel(testModel.cn);
-
   const nodes = layoutNodes(yarnGraph);
-
   const yarnPath = yarnGraph.makeNice();
-
   const yarnPathLinks = yarnGraph.yarnPathToLinks();
-  draw();
 
-  return { relax, stopSim };
+  let layers = null;
+
+  populateLayers();
+  draw(scale, pan);
+
+  return { relax, stopSim, redraw: draw };
 }
