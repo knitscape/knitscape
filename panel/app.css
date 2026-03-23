@@ -380,7 +380,7 @@ input[type="range"]:focus::-moz-range-thumb {
 
 @layer components {
   .bottom-bars-container {
-    @apply z-10 bg-base-1 text-base-7;
+    @apply mt-auto z-10 bg-base-1 text-base-7;
     box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
   }
 

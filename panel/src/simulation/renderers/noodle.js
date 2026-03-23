@@ -363,14 +363,16 @@ function buildJoinGeometry(splinePts, pointBuffer) {
 }
 
 function init(yarnData, canvas) {
-  renderer = new Renderer({
-    dpr: 2,
-    canvas: canvas,
-    width: canvas.parentNode.clientWidth,
-    height: canvas.parentNode.clientHeight,
-  });
-  gl = renderer.gl;
-  gl.clearColor(0.1, 0.1, 0.1, 1);
+  if (!renderer || renderer.gl.canvas !== canvas) {
+    renderer = new Renderer({
+      dpr: 2,
+      canvas: canvas,
+      width: canvas.parentNode.clientWidth,
+      height: canvas.parentNode.clientHeight,
+    });
+    gl = renderer.gl;
+    gl.clearColor(0.1, 0.1, 0.1, 1);
+  }
 
   let bbox = bbox3d(yarnData[0].pts);
 
