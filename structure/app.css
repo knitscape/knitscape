@@ -1,0 +1,730 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  --base0: #0e0e0e;
+  --base1: #1a1a1a;
+  --base2: #2b2b2b;
+  --base3: #3c3c3c;
+  --base4: #4d4d4d;
+  --base5: #5e5e5e;
+  --base6: #6f6f6f;
+  --base7: #8a8a8a;
+  --base8: #9b9b9b;
+  --base9: #a1a1a1;
+  --base10: #b2b2b2;
+  --base11: #c3c3c3;
+  --base12: #d4d4d4;
+  --base13: #e5e5e5;
+
+  --accent-h: 316;
+  --accent-s: 29%;
+  --accent-l: 64%;
+  --accent: hsla(var(--accent-h), var(--accent-s), var(--accent-l));
+
+  --modal-background: var(--base3);
+  --modal-shadow: 0 0 10px 3px #0000009e;
+
+  --text-inactive: var(--base7);
+  --text-highlight: var(--base13);
+
+  --accH: var(--accent-h);
+  --accS: var(--accent-s);
+  --accL: var(--accent-l);
+
+  --transparency: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill-opacity=".05"><rect width="50" height="50" /><rect x="50" y="50" width="50" height="50" /></svg>')
+    0 0 / 20px 20px #f8f8f8;
+}
+
+/* ─── Global ─────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "National Park";
+  src: url("/assets/fonts/NP-VariableVF.woff2")
+      format("woff2 supports variations"),
+    url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
+}
+
+body {
+  @apply font-national-park bg-base-2 text-base-12 antialiased;
+  width: 100vw;
+  width: calc(var(--vw, 1vw) * 100);
+  height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+  font-size: var(--font-size, 1rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+}
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+
+#site {
+  @apply relative flex flex-1 select-none z-[1] overflow-hidden;
+}
+
+#sim-pane {
+  @apply flex flex-col;
+}
+
+#sim-container {
+  @apply relative flex-1 overflow-hidden;
+  box-shadow: inset 0 0 6px 0px rgba(0, 0, 0, 0.5);
+}
+
+#chart-pane {
+  @apply flex flex-col;
+}
+
+#chart-layout {
+  @apply relative flex-1 flex bg-base-2 overflow-hidden;
+}
+
+#desktop-container {
+  @apply flex-1 flex overflow-hidden;
+  box-shadow: inset 0 0 6px 0px rgba(0, 0, 0, 0.5);
+}
+
+#desktop {
+  @apply relative flex overflow-hidden flex-1 items-start;
+  box-shadow: inset 0 0 6px 0px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Taskbar ────────────────────────────────────────────────────────────── */
+
+#taskbar {
+  @apply flex bg-base-1 justify-between items-center p-[0.3em] z-[5] cursor-default;
+}
+
+#taskbar button {
+  @apply cursor-pointer;
+}
+
+.site-title {
+  @apply text-[1.2em] ml-[0.3em] cursor-default;
+}
+
+.taskbar-buttons > button {
+  color: var(--text-inactive);
+}
+
+.taskbar-buttons button.open {
+  color: hsl(var(--accH), var(--accS), 80%);
+  background-color: hsla(var(--accH), var(--accS), var(--accL), 0.3);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+
+.scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #1a1919 transparent;
+}
+
+.scroller::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background-color: #000000c9;
+  border-radius: 20px;
+  border: 3px solid transparent;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+@layer components {
+  a.btn {
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button.btn {
+    @apply border-none bg-transparent font-[inherit] p-0;
+  }
+
+  a.btn,
+  button.btn {
+    @apply inline-flex justify-center items-center rounded-[0.2em] text-base-10 leading-none text-center p-[0.3em];
+  }
+
+  a.btn:hover,
+  button.btn:hover {
+    @apply text-base-13;
+    background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+  }
+
+  button.btn.icon {
+    @apply p-[0.3em] text-[1.2em];
+  }
+
+  button.btn.icon-text {
+    @apply text-[1em] leading-none gap-[0.5em];
+  }
+
+  button.btn.icon-text > i {
+    @apply w-[1em] h-[1em];
+  }
+
+  button.btn.solid {
+    @apply bg-base-3;
+    box-shadow: 0 0 2px 0 black;
+  }
+
+  button.btn:disabled {
+    @apply bg-base-1 text-base-7 cursor-not-allowed;
+    box-shadow: 0 0 2px 0 black;
+  }
+
+  .btn.img {
+    @apply rounded-none border border-black p-0;
+  }
+
+  .btn.img.current {
+    @apply text-base-13;
+    outline: 1px solid white;
+    background-color: hsla(var(--accH), var(--accS), var(--accL), 0.3);
+  }
+
+  .btn.add-repeat {
+    @apply self-stretch;
+  }
+}
+
+/* ─── Dropdown ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  .has-dropdown {
+    @apply relative;
+  }
+
+  .dropdown {
+    @apply opacity-0 absolute flex flex-col gap-[0.2em] bg-base-1 p-[0.3em] rounded-[0.3em];
+  }
+
+  .dropdown.align-right {
+    @apply right-0;
+  }
+
+  .dropdown.above {
+    bottom: calc(100% + 0.5em);
+  }
+
+  .has-dropdown:focus-within .dropdown {
+    @apply opacity-100 pointer-events-auto;
+    box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .has-dropdown:focus-within .dropdown-toggle {
+    @apply bg-base-3;
+    box-shadow: 0 0 2px 0 black;
+  }
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .modal {
+    @apply min-w-[200px] absolute bg-base-3 z-[100] rounded-[10px] px-[0.6em] py-[0.5em];
+    margin: 100px;
+    align-self: center;
+    box-shadow: 0 0 10px 3px #0000009e;
+  }
+
+  .modal > h2 {
+    @apply text-[1.2em] mb-[0.5em];
+  }
+
+  .modal-content {
+    @apply flex flex-col gap-[0.4em];
+  }
+
+  #settings-modal,
+  #library-modal {
+    @apply max-w-[700px];
+  }
+
+  #background-color-edit {
+    @apply w-full h-[30px] text-[0.9em] text-black;
+  }
+}
+
+/* ─── Form controls ──────────────────────────────────────────────────────── */
+
+@layer components {
+  .form-control {
+    @apply font-bold;
+  }
+
+  .form-control.toggle {
+    @apply grid gap-[1.2em];
+    grid-template-columns: 1em auto;
+  }
+
+  .form-control.range {
+    @apply flex flex-col gap-[0.5em] mb-[0.5em];
+  }
+
+  .input {
+    font-size: max(16px, 1em);
+    @apply font-[inherit] py-[0.25em] px-[0.5em] bg-base-2 border border-base-4 rounded-[0.2em] text-base-7 transition-all duration-[50ms] ease-in-out leading-none;
+  }
+
+  .input:focus {
+    border-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+    @apply text-base-13;
+    box-shadow: 0 0 0 1px hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) + 60%), 0.8);
+    @apply outline-[2px] outline-transparent;
+  }
+
+  .input[type="number"]::-webkit-inner-spin-button,
+  .input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .input[type="number"] {
+    @apply text-center font-mono;
+    -moz-appearance: textfield;
+    @apply rounded-[0.3em];
+  }
+}
+
+/* ─── Checkbox ───────────────────────────────────────────────────────────── */
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  font: inherit;
+  color: currentColor;
+  width: 1.15em;
+  height: 1.15em;
+  border: 0.15em solid currentColor;
+  border-radius: 0.15em;
+  transform: translateY(-0.075em);
+  display: grid;
+  place-content: center;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 0.65em;
+  height: 0.65em;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: 50ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--accent);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+/* ─── Range ──────────────────────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 15rem;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #464646;
+  height: 0.5rem;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-track {
+  background: #464646;
+  height: 0.5rem;
+  border-radius: 4px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -3px;
+  background-color: #929292;
+  height: 16px;
+  width: 16px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  border: none;
+  border-radius: 0;
+  background-color: #929292;
+  height: 1rem;
+  width: 1rem;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb,
+input[type="range"]:focus::-moz-range-thumb {
+  border: 1px solid #053a5f;
+  outline: 3px solid #053a5f;
+  outline-offset: 0.125rem;
+}
+
+.panzoom-controls input[type="range"] {
+  @apply w-[5em];
+}
+
+/* ─── Left bar ───────────────────────────────────────────────────────────── */
+
+#left-bar {
+  @apply z-[3] bg-base-1 flex flex-col gap-[1em] px-[0.6em] overflow-y-auto;
+}
+
+/* ─── Tool picker ────────────────────────────────────────────────────────── */
+
+@layer components {
+  .tool-picker {
+    @apply top-[8px] right-[8px] absolute flex gap-[0.4em] p-[0.4em] rounded-[12px] bg-base-1 z-10 text-[larger] items-center;
+    box-shadow: 0 0 4px 0 black;
+  }
+
+  .tool-picker .btn.current {
+    background-color: var(--accent);
+    @apply text-base-2;
+  }
+}
+
+/* ─── Symbol picker ──────────────────────────────────────────────────────── */
+
+@layer components {
+  #symbol-picker {
+    @apply flex flex-col gap-[0.3em];
+  }
+
+  #symbol-picker > .btn.img {
+    @apply self-stretch justify-between rounded-[8px] overflow-hidden;
+  }
+
+  #symbol-picker > .btn.img div {
+    @apply flex items-center flex-1 leading-none;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+  }
+
+  .symbol-preview {
+    @apply w-[50px] h-[50px] block bg-white;
+    image-rendering: pixelated;
+  }
+}
+
+/* ─── Yarn picker ────────────────────────────────────────────────────────── */
+
+@layer components {
+  #yarn-picker {
+    @apply flex flex-col gap-[0.4em];
+  }
+
+  .btn.color-select {
+    @apply self-auto flex-[0_0_50px] p-0 rounded-[8px] border border-black overflow-hidden justify-between;
+  }
+
+  .color-preview {
+    @apply aspect-square h-full relative;
+    background: var(--current);
+  }
+
+  .color-label {
+    @apply text-[larger] font-black flex-1 leading-none;
+  }
+
+  #yarn-picker .btn.selected {
+    @apply text-base-13;
+    outline: 1px solid white;
+    background-color: hsla(var(--accH), var(--accS), var(--accL), 0.3);
+  }
+
+  .edit-color-btn {
+    @apply border-0 outline-0 p-0 cursor-pointer bg-transparent h-full w-full;
+  }
+
+  .edit-color-icon {
+    @apply text-base-13 absolute leading-none top-[5px] left-[5px];
+  }
+
+  .edit-color-icon > i {
+    @apply leading-none;
+    text-shadow: 0px 0px 2px black;
+  }
+
+  .delete-color-button {
+    @apply absolute flex p-0 border-0 outline-0 bg-transparent text-base-3 text-[x-large] leading-none bottom-[2px] right-[2px] cursor-pointer;
+  }
+
+  .delete-color-button:hover {
+    @apply text-red-500;
+    text-shadow: 0px 0px 3px black;
+  }
+}
+
+/* ─── Repeat canvas ──────────────────────────────────────────────────────── */
+
+@layer components {
+  #canvas-transform-group {
+    @apply block;
+    outline: 1px solid black;
+  }
+
+  #symbol-canvas {
+    @apply relative;
+  }
+
+  .grid-canvas,
+  .outline-canvas,
+  #yarn-color-canvas {
+    @apply pointer-events-none absolute left-0 top-0;
+  }
+
+  #repeat-container {
+    @apply absolute left-0 top-0;
+  }
+
+  .repeat-canvas-container {
+    @apply absolute flex justify-center;
+  }
+
+  .repeat-bounds {
+    @apply absolute z-[2] bottom-0 left-0 pointer-events-none flex items-center justify-center;
+    outline: 2px solid white;
+    outline-offset: -2px;
+    border: 4px solid black;
+  }
+
+  .repeat-area-dragger {
+    @apply absolute border-0 flex items-center pointer-events-auto;
+    box-shadow: 0 0 1px 0;
+  }
+
+  .repeat-area-dragger > i {
+    @apply pointer-events-none;
+  }
+
+  .repeat-area-dragger.y-axis {
+    bottom: calc(100% + 4px);
+    @apply rounded-t-[12px] py-[0.3em] px-[0.7em];
+  }
+
+  .repeat-area-dragger.x-axis {
+    left: calc(100% + 4px);
+    @apply rounded-r-[12px] py-[0.7em] px-[0.3em];
+  }
+
+  .repeat-canvas {
+    @apply relative block z-[1];
+    outline: 1px solid black;
+    outline-offset: -1px;
+  }
+
+  .repeat-ui {
+    @apply absolute bg-base-2 rounded-[8px] flex p-[5px] gap-[5px] z-[2];
+    box-shadow: 0 0 5px 0 black;
+  }
+
+  .repeat-controls {
+    bottom: calc(100% + 8px);
+    @apply right-0;
+  }
+
+  .move-repeat {
+    @apply cursor-move;
+  }
+
+  .delete-repeat {
+    @apply absolute z-10 top-full;
+  }
+
+  .resize-repeat {
+    @apply cursor-[unset] bottom-full left-full absolute;
+  }
+
+  .resize-repeat > i {
+    @apply pointer-events-none;
+  }
+
+  .repeat-ui .btn.solid {
+    @apply aspect-square;
+  }
+}
+
+/* ─── Repeat library ─────────────────────────────────────────────────────── */
+
+@layer components {
+  #repeat-library {
+    @apply flex-col overflow-hidden;
+  }
+
+  #repeat-library > h2 {
+    @apply text-[1.2em] px-[0.4em] py-[0.4em] flex justify-between items-center gap-[0.5em];
+  }
+
+  #repeat-library-content {
+    @apply grid overflow-y-auto h-full transition-all duration-[150ms];
+    grid-template-columns: auto auto auto;
+    grid-auto-rows: 40px;
+    row-gap: 1px;
+  }
+
+  #repeat-library-content.open {
+    height: 400px;
+    @apply min-w-[150px];
+  }
+
+  #repeat-library-content.closed {
+    @apply h-0 w-0;
+  }
+
+  .repeat-title {
+    @apply font-semibold text-end flex bg-base-3 items-center justify-end px-[5px];
+  }
+
+  .repeat-size {
+    @apply font-mono flex bg-base-3 items-center justify-end px-[8px];
+  }
+
+  .repeat-library-canvas {
+    @apply flex justify-center bg-base-3;
+  }
+
+  .repeat-library-canvas > canvas {
+    @apply h-full cursor-grab;
+    image-rendering: pixelated;
+    outline: 1px solid black;
+  }
+}
+
+/* ─── Yarn sequence ──────────────────────────────────────────────────────── */
+
+#yarn-sequence {
+  @apply absolute flex flex-col z-[100];
+  right: calc(100% + 10px);
+  bottom: 0;
+}
+
+#yarn-sequence > button {
+  @apply w-full absolute overflow-hidden p-0;
+  bottom: 100%;
+  border-radius: 8px 8px 0 0;
+  color: var(--text-inactive);
+}
+
+#yarn-sequence > canvas {
+  outline: 1px solid black;
+}
+
+/* ─── Pan-zoom controls ──────────────────────────────────────────────────── */
+
+.panzoom-controls {
+  @apply absolute items-center flex gap-[0.3em] right-[10px] bottom-[10px] bg-base-1 rounded-[10px] p-[0.4em];
+  box-shadow: 0 0 4px 0 black;
+}
+
+.panzoom-controls button {
+  @apply cursor-pointer self-auto;
+}
+
+/* ─── Chart size controls ────────────────────────────────────────────────── */
+
+#chart-size-controls {
+  @apply flex items-center gap-[0.4em] text-[1em];
+}
+
+/* ─── Library item ───────────────────────────────────────────────────────── */
+
+.library-item {
+  @apply flex justify-between items-center;
+}
+
+/* ─── Simulation z-layers ────────────────────────────────────────────────── */
+
+.top {
+  @apply z-[5];
+}
+
+.mid {
+  @apply z-[2];
+}
+
+.bottom {
+  @apply z-0;
+  filter: brightness(0.7);
+}
+
+.mirrored > canvas {
+  transform: scaleX(-1);
+}
+
+.sim-transform-group.right-side {
+  @apply flex flex-col;
+}
+
+.sim-transform-group.wrong-side {
+  @apply flex flex-col-reverse;
+}
+
+#back,
+#mid,
+#front {
+  @apply absolute top-0 left-0;
+}
+
+/* ─── Punchcard ──────────────────────────────────────────────────────────── */
+
+.punchcard-preview {
+  @apply h-[15rem] relative;
+}
+
+#punchcard {
+  @apply h-full bg-white;
+}
+
+/* ─── Split.js gutter ────────────────────────────────────────────────────── */
+
+.gutter {
+  @apply bg-base-1 bg-no-repeat bg-center;
+}
+
+.gutter.gutter-horizontal {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
+  cursor: col-resize;
+}
+
+.gutter.gutter-vertical {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=");
+  cursor: row-resize;
+}
+
+/* ─── Cursor states ──────────────────────────────────────────────────────── */
+
+.grabbing {
+  cursor: grabbing !important;
+}
+
+.grab {
+  cursor: grab !important;
+}

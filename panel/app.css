@@ -1,0 +1,868 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  --base0: #0e0e0e;
+  --base1: #1a1a1a;
+  --base2: #2b2b2b;
+  --base3: #3c3c3c;
+  --base4: #4d4d4d;
+  --base5: #5e5e5e;
+  --base6: #6f6f6f;
+  --base7: #8a8a8a;
+  --base8: #9b9b9b;
+  --base9: #a1a1a1;
+  --base10: #b2b2b2;
+  --base11: #c3c3c3;
+  --base12: #d4d4d4;
+  --base13: #e5e5e5;
+
+  --accent-h: 316;
+  --accent-s: 29%;
+  --accent-l: 64%;
+  --accent: hsla(var(--accent-h), var(--accent-s), var(--accent-l));
+
+  --transparency: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill-opacity=".05"><rect width="50" height="50" /><rect x="50" y="50" width="50" height="50" /></svg>')
+    0 0 / 20px 20px #f8f8f8;
+}
+
+/* ─── Global ─────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "National Park";
+  src: url("/assets/fonts/NP-VariableVF.woff2")
+      format("woff2 supports variations"),
+    url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
+}
+
+body {
+  @apply font-national-park bg-base-2 text-base-12 antialiased;
+  width: 100vw;
+  width: calc(var(--vw, 1vw) * 100);
+  height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+  font-size: var(--font-size, 1rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+}
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+
+#site {
+  @apply flex flex-1 select-none overflow-hidden;
+}
+
+#view-pane {
+  @apply flex flex-col flex-1 overflow-hidden;
+}
+
+#chart-pane {
+  @apply flex relative overflow-hidden;
+}
+
+.desktop {
+  @apply flex-1 relative flex flex-col justify-between;
+}
+
+.vector-overlay {
+  @apply pointer-events-none;
+  box-shadow: inset 0 0 6px 0px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Taskbar ────────────────────────────────────────────────────────────── */
+
+#taskbar {
+  @apply flex bg-base-1 justify-between items-center px-[0.3em] py-[0.3em] z-[5] cursor-default;
+}
+
+.site-title {
+  @apply text-[1.2em] ml-[0.3em] cursor-default text-base-7;
+}
+
+.button-group {
+  @apply flex;
+}
+
+.button-group > button {
+  @apply text-base-7;
+}
+
+.button-group button.open {
+  color: hsl(var(--accent-h), var(--accent-s), 80%);
+  background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+
+.scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #1a1919 transparent;
+}
+
+.scroller::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background-color: #000000c9;
+  border-radius: 20px;
+  border: 3px solid transparent;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+@layer components {
+  a.btn {
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button.btn {
+    @apply border-none bg-transparent font-[inherit] p-0;
+  }
+
+  a.btn,
+  button.btn {
+    @apply inline-flex justify-center items-center rounded-[0.2em] text-base-10 leading-none text-center p-[0.3em];
+  }
+
+  a.btn:hover,
+  button.btn:hover {
+    @apply text-base-13;
+    background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+  }
+
+  button.btn.icon {
+    @apply p-[0.3em] text-[1.2em];
+  }
+
+  button.btn.solid {
+    @apply bg-base-3;
+    box-shadow: 0 0 2px 0 black;
+  }
+
+  button.btn:disabled {
+    @apply bg-base-1 text-base-7 cursor-not-allowed;
+    box-shadow: 0 0 2px 0 black;
+  }
+
+  button.btn.delete,
+  .delete.btn {
+    @apply text-base-7 flex gap-[0.4em];
+  }
+
+  button.btn.delete:hover,
+  .delete.btn:hover {
+    color: rgb(165, 39, 39);
+    background-color: transparent;
+  }
+}
+
+/* ─── Radio group ────────────────────────────────────────────────────────── */
+
+@layer components {
+  .radio-group {
+    @apply flex items-center rounded-[0.2em];
+    box-shadow: 0 0 3px 0 black;
+  }
+
+  .radio-group span {
+    @apply italic px-[0.4em];
+  }
+
+  .radio-group button {
+    @apply border-none bg-base-0 font-[inherit] py-[0.2em] px-[0.4em] rounded-[0.2em] text-base-7;
+  }
+
+  .radio-group button:hover {
+    @apply text-base-12;
+  }
+
+  .radio-group button.selected {
+    @apply bg-base-2;
+  }
+}
+
+/* ─── Dropdown ───────────────────────────────────────────────────────────── */
+
+@layer components {
+  .has-dropdown {
+    @apply relative;
+  }
+
+  .dropdown {
+    @apply opacity-0 absolute flex flex-col gap-[0.2em] bg-base-1 p-[0.3em] rounded-[0.3em];
+  }
+
+  .dropdown.align-right {
+    @apply right-0;
+  }
+
+  .dropdown.above {
+    bottom: calc(100% + 0.5em);
+  }
+
+  .has-dropdown:focus-within .dropdown {
+    @apply opacity-100 pointer-events-auto;
+    box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .has-dropdown:focus-within .dropdown-toggle {
+    @apply bg-base-3;
+    box-shadow: 0 0 2px 0 black;
+  }
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .modal {
+    @apply min-w-[200px] absolute bg-base-3 z-[100] rounded-[10px] px-[0.6em] py-[0.5em];
+    margin: 100px;
+    align-self: center;
+    box-shadow: 0 0 10px 3px #0000009e;
+  }
+
+  .modal > h2 {
+    @apply text-[1.2em] mb-[0.5em];
+  }
+
+  .modal-content {
+    @apply flex flex-col gap-[0.4em];
+  }
+
+  #settings-modal {
+    @apply max-w-[700px];
+  }
+}
+
+/* ─── Form controls ──────────────────────────────────────────────────────── */
+
+@layer components {
+  .form-control {
+    @apply font-bold;
+  }
+
+  .form-control.toggle {
+    @apply grid gap-[1.2em];
+    grid-template-columns: 1em auto;
+  }
+
+  .form-control.range {
+    @apply flex flex-col gap-[0.5em] mb-[0.5em];
+  }
+
+  .input {
+    font-size: max(16px, 1em);
+    @apply font-[inherit] py-[0.25em] px-[0.5em] bg-base-2 border border-base-4 rounded-[0.2em] text-base-7 transition-all duration-[50ms] ease-in-out leading-none;
+  }
+
+  .input:focus {
+    border-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+    @apply text-base-13;
+    box-shadow: 0 0 0 1px hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) + 60%), 0.8);
+    @apply outline-[2px] outline-transparent;
+  }
+
+  .input[type="number"]::-webkit-inner-spin-button,
+  .input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .input[type="number"] {
+    @apply text-center font-mono;
+    -moz-appearance: textfield;
+    @apply rounded-[0.3em];
+  }
+}
+
+/* ─── Checkbox ───────────────────────────────────────────────────────────── */
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  font: inherit;
+  color: currentColor;
+  width: 1.15em;
+  height: 1.15em;
+  border: 0.15em solid currentColor;
+  border-radius: 0.15em;
+  transform: translateY(-0.075em);
+  display: grid;
+  place-content: center;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 0.65em;
+  height: 0.65em;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: 50ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--accent);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+/* ─── Range ──────────────────────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 15rem;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #464646;
+  height: 0.5rem;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-track {
+  background: #464646;
+  height: 0.5rem;
+  border-radius: 4px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -3px;
+  background-color: #929292;
+  height: 16px;
+  width: 16px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  border: none;
+  border-radius: 0;
+  background-color: #929292;
+  height: 1rem;
+  width: 1rem;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb,
+input[type="range"]:focus::-moz-range-thumb {
+  border: 1px solid #053a5f;
+  outline: 3px solid #053a5f;
+  outline-offset: 0.125rem;
+}
+
+/* ─── Chart bottom bar ───────────────────────────────────────────────────── */
+
+@layer components {
+  .bottom-bars-container {
+    @apply z-10 bg-base-1 text-base-7;
+    box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .chart-bottom-bar {
+    @apply flex justify-between items-center w-full gap-[0.4em] py-[0.2em] pl-[0.4em] text-[0.9em];
+  }
+
+  .h-group {
+    @apply flex items-center gap-[0.4em];
+  }
+
+  .mode-toggle {
+    @apply w-[8em] justify-self-start;
+  }
+
+  .pointer-pos {
+    @apply font-mono text-[0.8em] w-[9ch] flex flex-col items-end;
+  }
+
+  .chart-scale {
+    @apply font-mono text-[0.9em] flex border border-base-4 bg-base-4 gap-px;
+  }
+
+  .chart-scale .input {
+    @apply z-[1] text-[1em] border-none text-end w-[3em] rounded-none;
+  }
+
+  .spinners {
+    @apply flex bg-base-3 flex-col;
+  }
+
+  .spinners button {
+    @apply flex-1 border-0 outline-0 p-0 rounded-none bg-base-2 w-[1em] leading-none text-base-7;
+  }
+
+  .spinners button:hover {
+    @apply bg-base-4 text-base-13;
+  }
+}
+
+/* ─── Mode toolbars ──────────────────────────────────────────────────────── */
+
+@layer components {
+  .mode-toolbar {
+    @apply relative flex items-center gap-[0.4em] py-[0.2em] pl-[0.4em] justify-between text-[0.9em];
+  }
+
+  .toolbar-message {
+    @apply italic;
+  }
+
+  .area-size {
+    @apply font-mono;
+  }
+}
+
+/* ─── Pickers ────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .picker-container {
+    @apply flex self-end items-start opacity-0 m-[0.4em] z-10 pointer-events-none;
+  }
+
+  .picker-container.shown {
+    @apply opacity-100;
+  }
+
+  .tool-picker {
+    @apply flex items-center gap-[0.3em] pb-[0.3em] pl-[0.3em] pt-[0.3em] bg-base-1 rounded-l-[0.5em] pointer-events-auto z-[1];
+    box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .block-size {
+    @apply font-mono;
+  }
+
+  .tool-picker button {
+    @apply w-10 h-10 rounded-[0.4em] border border-black;
+  }
+
+  .tool-picker .btn.current {
+    background-color: var(--accent);
+    @apply text-base-2;
+  }
+
+  .palette {
+    --color: var(--base0);
+    @apply flex flex-col rounded-[0_0.5em_0.5em_0.5em] bg-base-1 overflow-auto p-[0.3em] gap-[0.3em] pointer-events-auto;
+    box-shadow: 0 0 6px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .palette .close-picker {
+    @apply bg-transparent border-none;
+  }
+
+  .palette button {
+    @apply flex-[1_0_40px] w-10 p-0 border border-black rounded-[0.4em] overflow-hidden;
+    background-color: var(--color);
+  }
+
+  .palette button.selected {
+    @apply z-[2];
+    outline: 2px solid white;
+  }
+}
+
+/* ─── Simulation pane ────────────────────────────────────────────────────── */
+
+@layer components {
+  #sim-canvas {
+    @apply w-full h-full;
+  }
+
+  .sim-action-button {
+    @apply flex gap-[0.4em] p-[0.4em];
+  }
+
+  .sim-toolbar {
+    @apply bg-base-1 text-base-7 flex justify-between gap-[0.4em] py-[0.2em] pr-[0.4em] text-[0.9em];
+  }
+}
+
+/* ─── Time-needle view ───────────────────────────────────────────────────── */
+
+@layer components {
+  #time-needle-pane {
+    @apply flex overflow-hidden flex-1;
+  }
+
+  .time-needle-container {
+    @apply flex gap-[3px];
+  }
+
+  #timeneedlebitmap {
+    @apply h-full;
+    image-rendering: pixelated;
+  }
+
+  .yarn-assignments {
+    @apply absolute z-[2] flex flex-col-reverse w-[30px];
+  }
+
+  .yarn-cell {
+    @apply flex items-center overflow-hidden font-mono;
+    container-name: yarn;
+    color: var(--base0);
+    background-color: var(--color);
+  }
+
+  .yarn-cell div {
+    @apply flex-1;
+  }
+
+  .yarn-cell span {
+    @apply absolute;
+  }
+}
+
+/* ─── SVG annotations (plain CSS — Tailwind can't express SVG attributes) ── */
+
+.boundary {
+  fill: transparent;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: rgb(69, 69, 69);
+}
+
+.boundaryMode.allowHover .boundary.inactive:hover {
+  stroke: rgb(255, 255, 255);
+  stroke-width: 3;
+  cursor: pointer;
+}
+
+.background-path {
+  fill: transparent;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: rgb(69, 69, 69);
+  filter: drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.5));
+}
+
+.background-path-hover {
+  fill: transparent;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: transparent;
+}
+
+.pathMode.allowHover .background-path-hover:hover {
+  stroke: rgb(255, 255, 255);
+  filter: drop-shadow(0px 0px 2px black);
+}
+
+.path {
+  pointer-events: all;
+}
+
+.path.bottom {
+  stroke: rgb(255, 255, 255);
+  filter: drop-shadow(0px 0px 2px black);
+  stroke-width: 4px;
+  stroke-dasharray: 10 4;
+}
+
+.path.top {
+  stroke: transparent;
+  stroke-width: 7px;
+  stroke-dasharray: 10 4;
+  cursor: grab;
+}
+
+.path.top:hover {
+  stroke: rgb(224, 255, 102);
+  filter: drop-shadow(0px 0px 2px black);
+}
+
+.point {
+  fill: rgb(223, 223, 223);
+  stroke: rgb(255, 255, 255);
+  r: 6;
+  stroke-width: 2px;
+  filter: drop-shadow(0px 0px 2px black);
+  pointer-events: all;
+  cursor: grab;
+}
+
+.grabbing .path.top,
+.grabbing .point {
+  cursor: grabbing;
+}
+
+.point:hover {
+  stroke: rgb(224, 255, 102);
+  fill: rgb(224, 255, 102);
+  stroke-width: 3px;
+}
+
+.showAnnotations .annotation-container,
+.showAnnotations .annotation {
+  opacity: 1;
+}
+
+.annotation-container {
+  opacity: 0;
+  stroke-width: 2px;
+  filter: drop-shadow(0px 0px 2px black);
+}
+
+.annotation {
+  opacity: 0;
+  font-family: monospace;
+  font-size: small;
+  font-weight: bold;
+}
+
+/* ─── Stitch select ──────────────────────────────────────────────────────── */
+
+@layer components {
+  .stitch-select-box {
+    @apply absolute flex justify-center;
+  }
+
+  .stitch-select-box > svg {
+    @apply w-full h-full absolute;
+  }
+
+  .stitch-select {
+    stroke: white;
+    stroke-width: 8px;
+    stroke-dasharray: 10 4;
+    fill: #ffffff49;
+  }
+
+  .select-tools {
+    @apply absolute flex flex-col justify-center gap-[5px] h-full;
+  }
+
+  .add-block {
+    @apply z-[1] p-[5px] leading-none cursor-pointer whitespace-nowrap;
+  }
+}
+
+/* ─── Blocks ─────────────────────────────────────────────────────────────── */
+
+@layer components {
+  .block {
+    @apply absolute flex items-center justify-center;
+    outline: 1px solid black;
+  }
+
+  .block-inset-shadow {
+    @apply w-full h-full absolute pointer-events-none;
+    box-shadow: 0 0 5px 0 black inset;
+  }
+
+  .block:hover .hover-overlay {
+    @apply opacity-100;
+  }
+
+  .hover-overlay {
+    @apply opacity-0 flex absolute items-center justify-center w-full h-full;
+    outline: 4px solid white;
+    border: 3px solid black;
+    background-color: #ffffff3c;
+  }
+
+  .move-block {
+    @apply cursor-grab absolute leading-none text-[0.9em] p-[0.3em] border border-black rounded-[0.5em];
+    right: 100%;
+    top: 100%;
+  }
+
+  .grabbing .dragger,
+  .grabbing .move-block {
+    @apply cursor-grabbing;
+  }
+
+  .dragger {
+    @apply absolute leading-none cursor-grab inline-flex items-center border border-black justify-center;
+  }
+
+  .dragger.up {
+    @apply w-[2em];
+    bottom: 100%;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .dragger.down {
+    @apply w-[2em];
+    top: 100%;
+    border-radius: 0 0 8px 8px;
+  }
+
+  .dragger.left {
+    @apply h-[2em];
+    right: 100%;
+    border-radius: 8px 0 0 8px;
+  }
+
+  .dragger.right {
+    @apply h-[2em];
+    left: 100%;
+    border-radius: 0 8px 8px 0;
+  }
+}
+
+/* ─── Yarn panel ─────────────────────────────────────────────────────────── */
+
+@layer components {
+  .yarn-panel {
+    @apply flex flex-col z-10 px-px bg-base-1 justify-end;
+    box-sizing: content-box;
+  }
+
+  .yarn-row-assignments {
+    @apply absolute bottom-0 flex flex-col-reverse z-0;
+  }
+
+  .yarn-row {
+    @apply relative flex-1 flex;
+  }
+
+  .yarn-row:hover::after {
+    content: "";
+    @apply absolute h-full w-full pointer-events-none;
+    background-color: #ffffff49;
+  }
+
+  .yarn-cell {
+    @apply flex-1;
+  }
+
+  .yarn-panel.collapsed .yarn-cell {
+    width: 8px;
+    max-width: 8px;
+  }
+
+  .yarn-panel.expanded .yarn-cell {
+    width: 25px;
+    max-width: 25px;
+  }
+
+  .yarn-cell.active {
+    background-color: var(--color);
+  }
+
+  .yarn-cell.inactive {
+    @apply bg-base-3;
+  }
+
+  .manage-yarns {
+    @apply bg-base-1 z-[2] relative;
+  }
+
+  .yarn-btns {
+    @apply bg-base-1 absolute bottom-full min-w-fit w-full flex flex-col items-end text-base-7;
+  }
+
+  .yarn-btns div {
+    @apply p-[4px] w-[25px] flex items-center justify-center cursor-pointer;
+  }
+
+  .yarn-btns div:hover {
+    @apply text-base-12;
+  }
+
+  .available-yarns {
+    @apply flex gap-px;
+  }
+
+  .edit-yarn {
+    @apply flex flex-col justify-center items-center pt-[8px] gap-[8px];
+    background-color: var(--color);
+  }
+
+  .yarn-panel.collapsed .edit-yarn {
+    @apply cursor-default pointer-events-none;
+  }
+
+  .yarn-panel.expanded .edit-yarn {
+    @apply cursor-pointer pointer-events-auto;
+  }
+
+  .delete-yarn,
+  .edit-yarn-icon {
+    @apply invisible text-base-0;
+  }
+
+  .yarn-panel.expanded .edit-yarn:hover .delete-yarn,
+  .yarn-panel.expanded .edit-yarn-icon {
+    @apply visible;
+  }
+
+  .delete-yarn {
+    @apply bg-base-0 w-full flex justify-center items-center py-[4px];
+  }
+
+  .delete-yarn button {
+    @apply p-0 border-0 outline-0 text-base-7 bg-transparent;
+  }
+
+  .delete-yarn button:hover {
+    @apply text-red-500;
+  }
+}
+
+/* ─── Example library ────────────────────────────────────────────────────── */
+
+@layer components {
+  .library-item {
+    @apply flex justify-between items-center;
+  }
+}
+
+/* ─── Split.js gutter ────────────────────────────────────────────────────── */
+
+.gutter {
+  @apply bg-base-1 bg-no-repeat bg-center;
+}
+
+.gutter.gutter-horizontal {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
+  cursor: col-resize;
+}
+
+/* ─── Cursor states ──────────────────────────────────────────────────────── */
+
+.grabbing {
+  cursor: grabbing;
+}
+
+.moving {
+  cursor: move;
+}
+
+.crosshair {
+  cursor: crosshair;
+}
+
+#svg-layer.blockMode {
+  cursor: crosshair;
+}
