@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /home/hannah/Code/knitscape branch -a)",
+      "Bash(git checkout:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(\"/home/hannah/Code/knitscape/examples/hat mosaic.json\")",
+      "Bash(npm run:*)"
+    ]
+  }
+}

@@ -1,20 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>knitscape</title>
-    <link rel="stylesheet" href="./base.css" />
-    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      @font-face {
+        font-family: "National Park";
+        src:
+          url("/assets/fonts/NP-VariableVF.woff2")
+            format("woff2 supports variations"),
+          url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
+      }
 
-    <script
-      src="https://kit.fontawesome.com/c412915ffb.js"
-      crossorigin="anonymous"></script>
+      :root {
+        --base0: #0e0e0e;
+        --base1: #1a1a1a;
+        --base2: #2b2b2b;
+        --base3: #3c3c3c;
+        --base4: #4d4d4d;
+        --base7: #8a8a8a;
+        --base10: #b2b2b2;
+        --base12: #d4d4d4;
+        --base13: #e5e5e5;
+
+        --accent-h: 316;
+        --accent-s: 29%;
+        --accent-l: 64%;
+        --accent: hsla(var(--accent-h), var(--accent-s), var(--accent-l));
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+      }
+
+      body {
+        font-family: "National Park", sans-serif;
+        background-color: var(--base2);
+        color: var(--base12);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      header h1 {
+        font-size: 2.8rem;
+        font-variation-settings: "wght" 600;
+        letter-spacing: 0.04em;
+        color: var(--base13);
+      }
+
+      header p {
+        margin-top: 0.6rem;
+        font-size: 1rem;
+        color: var(--base7);
+      }
+
+      .tools {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .tool-card {
+        background: var(--base1);
+        border: 1px solid var(--base3);
+        border-radius: 6px;
+        padding: 1.75rem 2rem;
+        width: 260px;
+        text-decoration: none;
+        color: inherit;
+        transition:
+          border-color 80ms,
+          background-color 80ms;
+      }
+
+      .tool-card:hover {
+        background: var(--base3);
+        border-color: var(--base4);
+      }
+
+      .tool-card h2 {
+        font-size: 1.3rem;
+        font-variation-settings: "wght" 600;
+        color: var(--base13);
+        margin-bottom: 0.5rem;
+      }
+
+      .tool-card p {
+        font-size: 0.9rem;
+        color: var(--base7);
+        line-height: 1.5;
+      }
+
+      .tool-card .arrow {
+        display: inline-block;
+        margin-top: 1.2rem;
+        font-size: 0.85rem;
+        color: var(--accent);
+      }
+    </style>
   </head>
   <body>
-    <script
-      src="src/index.js"
-      type="module"
-      style="touch-action: none"></script>
+    <header>
+      <h1>knitscape</h1>
+      <p>Machine knitting design tools</p>
+    </header>
+
+    <div class="tools">
+      <a class="tool-card" href="./structure/">
+        <h2>Structure</h2>
+        <p>Design and simulate knit structures.</p>
+        <span class="arrow">open &rarr;</span>
+      </a>
+      <a class="tool-card" href="./panel/">
+        <h2>Panel</h2>
+        <p>
+          Design and simulate knit panels. Visualize structures and shaped
+          fabric in 3D.
+        </p>
+        <span class="arrow">open &rarr;</span>
+      </a>
+    </div>
   </body>
 </html>
