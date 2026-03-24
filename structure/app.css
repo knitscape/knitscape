@@ -429,7 +429,7 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .symbol-preview {
-    @apply w-[50px] h-[50px] block bg-white;
+    @apply w-[50px] h-[50px] block;
     image-rendering: pixelated;
   }
 }
