@@ -1,4 +1,4 @@
-import { Vec3 } from "./vec3";
+import { Vec3 } from "../../utils/Vec3";
 
 export const Mat4 = {
   translate: function (m, tx, ty, tz) {

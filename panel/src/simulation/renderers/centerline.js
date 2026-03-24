@@ -1,16 +1,8 @@
-import {
-  Renderer,
-  Transform,
-  Program,
-  Camera,
-  Orbit,
-  Vec3,
-  Geometry,
-  Mesh,
-} from "ogl";
-
-import { buildYarnCurve } from "./utils/yarnSpline";
 import { html, render } from "lit-html";
+import { buildYarnCurve } from "./utils/yarnSpline";
+import { initShaderProgram, resizeCanvasToDisplaySize } from "./utils/helpers";
+import { createCamera3D } from "./utils/Camera3D";
+
 const vertexShader = /* glsl */ `
 precision highp float;
 attribute vec3 position;
@@ -18,10 +10,8 @@ attribute vec3 position;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 
-
 void main() {
-  vec4 mvPos = modelViewMatrix *  vec4(position, 1.0);
-
+  vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mvPos;
   gl_PointSize = 50.0 / length(mvPos.xyz);
 }
@@ -34,8 +24,7 @@ uniform vec3 uColor;
 
 void main() {
   vec2 uv = gl_PointCoord.xy;
-  float circle = step(0.5, 1.0-length(uv - 0.5));
-
+  float circle = step(0.5, 1.0 - length(uv - 0.5));
   gl_FragColor.rgb = uColor;
   gl_FragColor.a = circle;
 }
@@ -84,241 +73,139 @@ function monitorView() {
   </div>`;
 }
 
-let gl, controls, renderer, camera, scene;
+let gl, camera;
+// Each entry: { controlVAO, controlCount, splineVAO, splineCount, buffer }
+let yarns = [];
+let pointProgram, lineProgram;
 
-function minMax(pts) {
-  const min = { x: Infinity, y: Infinity, z: Infinity };
-  const max = { x: -Infinity, y: -Infinity, z: -Infinity };
+function createVAO(data) {
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 
-  for (let i = 0; i + 2 < pts.length; i += 3) {
-    min.x = Math.min(min.x, pts[i + 0]);
-    min.y = Math.min(min.y, pts[i + 1]);
-    min.z = Math.min(min.z, pts[i + 2]);
-    max.x = Math.max(max.x, pts[i + 0]);
-    max.y = Math.max(max.y, pts[i + 1]);
-    max.z = Math.max(max.z, pts[i + 2]);
-  }
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
 
-  return { min, max };
-}
+  const posLoc = gl.getAttribLocation(pointProgram.program, "position");
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
 
-function computeCenter(pts) {
-  const { min, max } = minMax(pts);
-
-  return [0.5 * (min.x + max.x), 0.5 * (min.y + max.y), 0.5 * (min.z + max.z)];
-}
-
-function buildControlPointLineStrip(controlPointData) {
-  const controlPointGeometry = new Geometry(gl, {
-    position: {
-      size: 3,
-      data: controlPointData,
-    },
-  });
-
-  const controlProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: lineShader,
-    uniforms: {
-      uColor: { value: [1.0, 1.0, 0.3] },
-    },
-    transparent: true,
-    depthTest: false,
-  });
-
-  const controlPointProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: pointShader,
-    uniforms: {
-      uColor: { value: [1.0, 1.0, 0.3] },
-    },
-    transparent: true,
-    depthTest: false,
-  });
-
-  const controlPoints = new Mesh(gl, {
-    mode: gl.POINTS,
-    geometry: controlPointGeometry,
-    program: controlPointProgram,
-  });
-
-  const controlLineStrip = new Mesh(gl, {
-    mode: gl.LINE_STRIP,
-    geometry: controlPointGeometry,
-    program: controlProgram,
-  });
-
-  controlPoints.setParent(scene);
-  controlLineStrip.setParent(scene);
-
-  return controlPointGeometry;
-}
-
-function buildSplineLineStrip(controlPointData) {
-  const splinePointData = new Float32Array(buildYarnCurve(controlPointData, 5));
-
-  const splinePointGeometry = new Geometry(gl, {
-    position: {
-      size: 3,
-      data: splinePointData,
-    },
-  });
-
-  const splinePointProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: pointShader,
-    uniforms: {
-      uColor: { value: [0.0, 0.3, 0.3] },
-    },
-    transparent: true,
-    depthTest: false,
-  });
-
-  const splineLineProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: lineShader,
-    uniforms: {
-      uColor: { value: [0.0, 0.3, 0.3] },
-    },
-    transparent: true,
-    depthTest: false,
-  });
-
-  const splinePoints = new Mesh(gl, {
-    mode: gl.POINTS,
-    geometry: splinePointGeometry,
-    program: splinePointProgram,
-  });
-
-  const splineLineStrip = new Mesh(gl, {
-    mode: gl.LINE_STRIP,
-    geometry: splinePointGeometry,
-    program: splineLineProgram,
-  });
-
-  splinePoints.setParent(scene);
-  splineLineStrip.setParent(scene);
-}
-
-function buildNormals() {
-  const normalData = new Float32Array(yarn.normals);
-
-  const normalGeometry = new Geometry(gl, {
-    position: {
-      size: 3,
-      data: normalData,
-    },
-  });
-
-  const normalProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: lineShader,
-    uniforms: {
-      uColor: { value: [1.0, 0.3, 0.3] },
-    },
-    depthTest: false,
-  });
-
-  const normals = new Mesh(gl, {
-    mode: gl.LINES,
-    geometry: normalGeometry,
-    program: normalProgram,
-  });
-
-  normals.setParent(scene);
-}
-
-function cnPoints() {
-  const cnData = new Float32Array(yarn.cnPoints);
-
-  const cnGeometry = new Geometry(gl, {
-    position: {
-      size: 3,
-      data: cnData,
-    },
-  });
-
-  const cnProgram = new Program(gl, {
-    vertex: vertexShader,
-    fragment: pointShader,
-    uniforms: {
-      uColor: { value: [1.0, 1.0, 1.0] },
-    },
-    depthTest: false,
-    transparent: true,
-  });
-
-  const cns = new Mesh(gl, {
-    mode: gl.POINTS,
-    geometry: cnGeometry,
-    program: cnProgram,
-  });
-
-  cns.setParent(scene);
+  gl.bindVertexArray(null);
+  return { vao, count: data.length / 3, buf };
 }
 
 function init(yarnData, canvas) {
-  if (!renderer || renderer.gl.canvas !== canvas) {
-    renderer = new Renderer({
-      dpr: 2,
-      canvas: canvas,
-      width: canvas.parentNode.clientWidth,
-      height: canvas.parentNode.clientHeight,
-    });
-    gl = renderer.gl;
+  if (!gl || gl.canvas !== canvas) {
+    gl = canvas.getContext("webgl2");
+    if (!gl) {
+      console.error("Unable to create WebGL2 context");
+      return;
+    }
     gl.clearColor(0.1, 0.1, 0.1, 1);
+
+    pointProgram = initShaderProgram(gl, vertexShader, pointShader);
+    lineProgram = initShaderProgram(gl, vertexShader, lineShader);
+
+    camera = createCamera3D();
+    camera.attach(canvas);
   }
 
-  let center = computeCenter(yarnData[0].pts);
-
-  if (!camera) {
-    camera = new Camera(gl, { fov: 60, far: 100, near: 0.1 });
-    camera.position.set(center[0], center[1], 15);
-
-    controls = new Orbit(camera, {
-      target: new Vec3(center[0], center[1], 0),
-      element: canvas,
-    });
-    camera.lookAt(controls.target);
-  }
-
-  scene = new Transform();
+  yarns = [];
 
   yarnData.forEach((yarn) => {
     if (yarn.pts.length < 6) return;
 
-    const controlPointData = new Float32Array(yarn.pts);
+    const controlData = new Float32Array(yarn.pts);
+    const splineData = new Float32Array(buildYarnCurve(yarn.pts, 5));
 
-    buildControlPointLineStrip(controlPointData);
-    // buildSplineLineStrip(controlPointData);
+    const control = createVAO(controlData);
+    const spline = createVAO(splineData);
+
+    yarns.push({ control, spline });
   });
+
+  const center = computeCenter(yarnData[0].pts);
+  camera.fit({ center, dimensions: [30, 30, 30] });
 }
 
-function updateYarnGeometry(yarnData) {
-  yarnData.forEach((yarn, yarnIndex) => {
-    const splinePts = buildYarnCurve(yarn.pts, 12);
+function computeCenter(pts) {
+  let minX = Infinity,
+    minY = Infinity,
+    minZ = Infinity;
+  let maxX = -Infinity,
+    maxY = -Infinity,
+    maxZ = -Infinity;
+  for (let i = 0; i < pts.length - 2; i += 3) {
+    minX = Math.min(minX, pts[i]);
+    maxX = Math.max(maxX, pts[i]);
+    minY = Math.min(minY, pts[i + 1]);
+    maxY = Math.max(maxY, pts[i + 1]);
+    minZ = Math.min(minZ, pts[i + 2]);
+    maxZ = Math.max(maxZ, pts[i + 2]);
+  }
+  return [0.5 * (minX + maxX), 0.5 * (minY + maxY), 0.5 * (minZ + maxZ)];
+}
 
-    // Update the points in the yarn's point array
-    splinePts.forEach((p, i) => (yarnPoints[yarnIndex][i] = p));
-
-    // Flag for update
-    yarnGeometry[yarnIndex].attributes.pointA.needsUpdate = true;
-    yarnGeometry[yarnIndex].attributes.pointB.needsUpdate = true;
-  });
+function setUniforms(program, viewMatrix, projMatrix, color) {
+  gl.useProgram(program.program);
+  gl.uniformMatrix4fv(
+    program.uniformLocations.modelViewMatrix,
+    false,
+    viewMatrix,
+  );
+  gl.uniformMatrix4fv(
+    program.uniformLocations.projectionMatrix,
+    false,
+    projMatrix,
+  );
+  if (program.uniformLocations.uColor != null) {
+    gl.uniform3fv(program.uniformLocations.uColor, color);
+  }
 }
 
 function draw() {
-  renderer.setSize(
-    gl.canvas.parentNode.clientWidth,
-    gl.canvas.parentNode.clientHeight
-  );
-  camera.perspective({
-    aspect: gl.canvas.clientWidth / gl.canvas.clientHeight,
-  });
-  controls.update();
+  resizeCanvasToDisplaySize(gl.canvas);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  renderer.render({ scene, camera });
+  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  const projMatrix = camera.projection(aspect);
+  const viewMatrix = camera.viewMatrix;
+
+  for (const yarn of yarns) {
+    if (STATE.controlPolyline) {
+      setUniforms(lineProgram, viewMatrix, projMatrix, [1.0, 1.0, 0.3]);
+      gl.bindVertexArray(yarn.control.vao);
+      gl.drawArrays(gl.LINE_STRIP, 0, yarn.control.count);
+    }
+
+    if (STATE.spline) {
+      setUniforms(lineProgram, viewMatrix, projMatrix, [0.0, 0.3, 0.3]);
+      gl.bindVertexArray(yarn.spline.vao);
+      gl.drawArrays(gl.LINE_STRIP, 0, yarn.spline.count);
+    }
+
+    if (STATE.splinePoints) {
+      setUniforms(pointProgram, viewMatrix, projMatrix, [0.0, 0.3, 0.3]);
+      gl.bindVertexArray(yarn.spline.vao);
+      gl.drawArrays(gl.POINTS, 0, yarn.spline.count);
+    }
+  }
+
+  gl.bindVertexArray(null);
   render(monitorView(), gl.canvas.parentNode);
+}
+
+function updateYarnGeometry(yarnData) {
+  yarnData.forEach((yarn, i) => {
+    if (!yarns[i]) return;
+    const splineData = new Float32Array(buildYarnCurve(yarn.pts, 5));
+    gl.bindBuffer(gl.ARRAY_BUFFER, yarns[i].spline.buf);
+    gl.bufferData(gl.ARRAY_BUFFER, splineData, gl.STATIC_DRAW);
+    yarns[i].spline.count = splineData.length / 3;
+  });
 }
 
 export const centerlineRenderer = {

@@ -1,80 +1,85 @@
-import { Vec3 } from "ogl";
+function dist3(a, b) {
+  const dx = a[0] - b[0],
+    dy = a[1] - b[1],
+    dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
 
-function catmullRom(p0, p1, p2, p3, alpha = 0.5, tension = 0) {
-  let t01 = p0.distance(p1);
-  let t12 = p1.distance(p2);
-  let t23 = p2.distance(p3);
+function add3(a, b) {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+}
 
-  const m1x =
-    (1.0 - tension) *
-    (p2[0] -
-      p1[0] +
-      t12 * ((p1[0] - p0[0]) / t01 - (p2[0] - p0[0]) / (t01 + t12)));
+function sub3(a, b) {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+}
 
-  const m1y =
-    (1.0 - tension) *
-    (p2[1] -
-      p1[1] +
-      t12 * ((p1[1] - p0[1]) / t01 - (p2[1] - p0[1]) / (t01 + t12)));
+function scale3(v, s) {
+  return [v[0] * s, v[1] * s, v[2] * s];
+}
 
-  const m1z =
-    (1.0 - tension) *
-    (p2[2] -
-      p1[2] +
-      t12 * ((p1[2] - p0[2]) / t01 - (p2[2] - p0[2]) / (t01 + t12)));
+function catmullRom(p0, p1, p2, p3, tension = 0) {
+  const t01 = dist3(p0, p1);
+  const t12 = dist3(p1, p2);
+  const t23 = dist3(p2, p3);
 
-  const m2x =
-    (1.0 - tension) *
-    (p2[0] -
-      p1[0] +
-      t12 * ((p3[0] - p2[0]) / t23 - (p3[0] - p1[0]) / (t12 + t23)));
+  const m1 = [
+    (1 - tension) *
+      (p2[0] -
+        p1[0] +
+        t12 * ((p1[0] - p0[0]) / t01 - (p2[0] - p0[0]) / (t01 + t12))),
+    (1 - tension) *
+      (p2[1] -
+        p1[1] +
+        t12 * ((p1[1] - p0[1]) / t01 - (p2[1] - p0[1]) / (t01 + t12))),
+    (1 - tension) *
+      (p2[2] -
+        p1[2] +
+        t12 * ((p1[2] - p0[2]) / t01 - (p2[2] - p0[2]) / (t01 + t12))),
+  ];
 
-  const m2y =
-    (1.0 - tension) *
-    (p2[1] -
-      p1[1] +
-      t12 * ((p3[1] - p2[1]) / t23 - (p3[1] - p1[1]) / (t12 + t23)));
-
-  const m2z =
-    (1.0 - tension) *
-    (p2[2] -
-      p1[2] +
-      t12 * ((p3[2] - p2[2]) / t23 - (p3[2] - p1[2]) / (t12 + t23)));
-
-  const m1 = new Vec3(m1x, m1y, m1z);
-  const m2 = new Vec3(m2x, m2y, m2z);
+  const m2 = [
+    (1 - tension) *
+      (p2[0] -
+        p1[0] +
+        t12 * ((p3[0] - p2[0]) / t23 - (p3[0] - p1[0]) / (t12 + t23))),
+    (1 - tension) *
+      (p2[1] -
+        p1[1] +
+        t12 * ((p3[1] - p2[1]) / t23 - (p3[1] - p1[1]) / (t12 + t23))),
+    (1 - tension) *
+      (p2[2] -
+        p1[2] +
+        t12 * ((p3[2] - p2[2]) / t23 - (p3[2] - p1[2]) / (t12 + t23))),
+  ];
 
   return {
-    a: p1.clone().sub(p2).multiply(2.0).add(m1).add(m2),
-    b: p1.clone().sub(p2).multiply(-3.0).sub(m1).sub(m1).sub(m2),
-    c: m1.clone(),
-    d: p1.clone(),
+    a: add3(add3(scale3(sub3(p1, p2), 2), m1), m2),
+    b: sub3(sub3(sub3(scale3(sub3(p1, p2), -3), m1), m1), m2),
+    c: [...m1],
+    d: [...p1],
   };
 }
 
 function pointInSegment(seg, t) {
-  return seg.a
-    .clone()
-    .multiply(t * t * t)
-    .add(seg.b.clone().multiply(t * t))
-    .add(seg.c.clone().multiply(t))
-    .add(seg.d.clone());
+  return add3(
+    add3(add3(scale3(seg.a, t * t * t), scale3(seg.b, t * t)), scale3(seg.c, t)),
+    seg.d
+  );
 }
 
 export function buildYarnCurve(pts, divisions = 5, tension = 0.5) {
-  let vec3arr = [];
-
+  const result = [];
   for (let i = 0; i < pts.length - 9; i += 3) {
-    let cp1 = new Vec3(pts[i + 0], pts[i + 1], pts[i + 2]);
-    let p1 = new Vec3(pts[i + 3], pts[i + 4], pts[i + 5]);
-    let p2 = new Vec3(pts[i + 6], pts[i + 7], pts[i + 8]);
-    let cp2 = new Vec3(pts[i + 9], pts[i + 10], pts[i + 11]);
-    const coefficients = catmullRom(cp1, p1, p2, cp2, 0, tension);
+    const cp1 = [pts[i], pts[i + 1], pts[i + 2]];
+    const p1 = [pts[i + 3], pts[i + 4], pts[i + 5]];
+    const p2 = [pts[i + 6], pts[i + 7], pts[i + 8]];
+    const cp2 = [pts[i + 9], pts[i + 10], pts[i + 11]];
+    const coefficients = catmullRom(cp1, p1, p2, cp2, tension);
 
     for (let t = 0; t < 1; t += 1 / divisions) {
-      vec3arr.push(pointInSegment(coefficients, t));
+      const pt = pointInSegment(coefficients, t);
+      result.push(pt[0], pt[1], pt[2]);
     }
   }
-
-  return vec3arr.map((pt) => pt.toArray()).flat();
+  return result;
 }
