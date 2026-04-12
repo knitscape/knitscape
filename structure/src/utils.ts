@@ -1,15 +1,5 @@
-import { bmp_lib } from "./lib/bmp";
 import { GLOBAL_STATE } from "./state";
-import type { Bimp } from "./lib/Bimp";
 import type { Vec2 } from "./types";
-
-export function generateChart(repeats: { bitmap: Bimp; pos: Vec2 }[]): Bimp {
-  let chart = GLOBAL_STATE.chart;
-  for (const repeat of repeats) {
-    chart = chart.overlay(repeat.bitmap, repeat.pos);
-  }
-  return chart;
-}
 
 export function devicePixelBoundingBox(el: Element): {
   width: number;
@@ -74,23 +64,6 @@ export function download(dataStr: string, downloadName?: string): void {
   downloadAnchorNode.remove();
 }
 
-export async function buildImagePalette(
-  imageNames: string[]
-): Promise<{ image: HTMLImageElement; title: string }[]> {
-  return await Promise.all(
-    imageNames.map(async (imageName) => {
-      const im = new Image();
-      im.src = new URL(
-        `../assets/symbols/${imageName}.png`,
-        import.meta.url
-      ).href;
-
-      await im.decode();
-      return { image: im, title: imageName };
-    })
-  );
-}
-
 export function isMobile(): boolean {
   let check = false;
   (function (a: string) {
@@ -108,57 +81,6 @@ export function isMobile(): boolean {
   return check;
 }
 
-function leastCommonMultiple(first: number, second: number): number {
-  let min = first > second ? first : second;
-  while (true) {
-    if (min % first == 0 && min % second == 0) {
-      return min;
-    }
-    min++;
-  }
-}
-
-function hexToRgb(hex: string): number[] | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16),
-      ]
-    : null;
-}
-
 export function shuffle<T>(arr: T[]): T[] {
   return arr.sort(() => (Math.random() > 0.5 ? 1 : -1));
-}
-
-export function makeBMP(
-  repeatBimp: Bimp,
-  colorRepeat: ArrayLike<number>,
-  palette: string[]
-): HTMLImageElement {
-  console.log(repeatBimp, colorRepeat, palette);
-  const height = leastCommonMultiple(repeatBimp.height, colorRepeat.length);
-  const bmp2d = repeatBimp.make2d();
-  const bits: number[][] = [];
-
-  for (let rowIndex = 0; rowIndex < height; rowIndex++) {
-    bits.push(
-      bmp2d[rowIndex % repeatBimp.height].map((bit) => {
-        if (bit == 0 || bit == 1) {
-          return colorRepeat[rowIndex % colorRepeat.length];
-        } else {
-          return palette.length;
-        }
-      })
-    );
-  }
-
-  const rgbPalette: (number[] | null)[] = palette.map((hex) => hexToRgb(hex));
-  rgbPalette.push([255, 255, 255]);
-
-  const im = document.createElement("img");
-  bmp_lib.render(im, bits, rgbPalette);
-  return im;
 }

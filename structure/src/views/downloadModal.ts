@@ -1,10 +1,7 @@
 import { html } from "lit-html";
 import {
-  downloadBMP,
-  downloadSVG,
   downloadJSON,
   downloadSilverKnitTxt,
-  downloadPNG,
   downloadKniterate,
   downloadPunchcard,
 } from "../actions/exporters";

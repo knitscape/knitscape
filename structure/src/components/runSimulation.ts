@@ -70,17 +70,9 @@ const debounce = (callback: (...args: any[]) => void, wait: number) => {
   };
 };
 
-export function stopSimulation(): void {
-  if (stopSim) stopSim();
-}
-
 export function runSimulation(): ComponentFactory {
-  return ({ state }) => {
-    let queueSim = false;
-
+  return () => {
     function run(): void {
-      queueSim = false;
-
       if (stopSim) stopSim();
 
       ({ stopSim, relax, reset, rescale } = simulate(

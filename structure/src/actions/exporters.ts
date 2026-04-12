@@ -1,29 +1,5 @@
 import { GLOBAL_STATE } from "../state";
-import { download, makeBMP } from "../utils";
-
-export function downloadSVG(): void {
-  const svg = document.getElementById("simulation")!;
-
-  const serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svg);
-
-  if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
-    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-  }
-  if (!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)) {
-    source = source.replace(
-      /^<svg/,
-      '<svg xmlns:xlink="http://www.w3.org/1999/xlink"'
-    );
-  }
-
-  source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
-
-  download(
-    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source),
-    "swatch.svg"
-  );
-}
+import { download } from "../utils";
 
 export function downloadPunchcard(): void {
   const svg = document.getElementById("punchcard")!;
@@ -46,25 +22,6 @@ export function downloadPunchcard(): void {
   download(
     "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source),
     "punchcard.svg"
-  );
-}
-
-export function downloadPNG(): void {
-  download(
-    (document.getElementById("preview") as HTMLCanvasElement).toDataURL(
-      "image/png"
-    ),
-    "chart.png"
-  );
-}
-
-export function downloadBMP(): void {
-  download(
-    makeBMP(
-      GLOBAL_STATE.repeats[0].bitmap,
-      GLOBAL_STATE.yarnSequence.pixels,
-      GLOBAL_STATE.yarnPalette
-    ).src
   );
 }
 

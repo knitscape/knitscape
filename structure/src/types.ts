@@ -57,13 +57,10 @@ export type PatternLibrary = Record<string, () => Promise<PatternJSON>>;
 
 export interface GlobalState {
   editingPalette: boolean;
-  transforming: boolean;
 
   activeTool: ToolName;
   activeSymbol: number;
 
-  chartBackground: string;
-  symbolPalette: Record<string, unknown>;
   symbolMap: SymbolName[];
   patternLibrary: PatternLibrary;
 
@@ -91,7 +88,6 @@ export interface GlobalState {
   flipped: boolean;
 
   // Punchcard
-  punchcardMode: boolean;
   machine: string;
   punchVerticalRepeats: number;
   rows: number;
@@ -101,7 +97,6 @@ export interface GlobalState {
   showLibrary: boolean;
   showSettings: boolean;
   showDownload: boolean;
-  showRepeatLibrary: boolean;
 
   snapshots: Record<string, unknown>[];
   lastSnapshot: number;

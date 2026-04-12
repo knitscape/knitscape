@@ -1,6 +1,5 @@
 import { GLOBAL_STATE, dispatch } from "../state";
 import { colorSequencePosAtCoords } from "../utils";
-import type { Vec2 } from "../types";
 
 function brushColor(e: TouchEvent, colorCanvas: HTMLElement): void {
   let pos = colorSequencePosAtCoords(e.touches[0], colorCanvas);
@@ -24,8 +23,6 @@ function brushColor(e: TouchEvent, colorCanvas: HTMLElement): void {
   }
 
   function end(): void {
-    dispatch({ transforming: false });
-
     colorCanvas.removeEventListener("touchmove", move as EventListener);
     colorCanvas.removeEventListener("touchcancel", end);
     colorCanvas.removeEventListener("touchend", end);
@@ -41,8 +38,6 @@ function resizeColorCanvas(e: TouchEvent): void {
   const start = e.touches[0].clientY;
 
   const end = (): void => {
-    dispatch({ transforming: false });
-
     window.removeEventListener("touchmove", onmove as EventListener);
     window.removeEventListener("touchend", end);
     window.removeEventListener("touchcancel", end);
@@ -71,14 +66,10 @@ export function colorSequenceTouchInteraction(
   resizeDragger: HTMLElement
 ): void {
   canvas.addEventListener("touchstart", (e: TouchEvent) => {
-    dispatch({ transforming: true });
-
     brushColor(e, canvas);
   });
 
   resizeDragger.addEventListener("touchstart", (e: TouchEvent) => {
-    dispatch({ transforming: true });
-
     resizeColorCanvas(e);
   });
 }

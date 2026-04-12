@@ -1,4 +1,4 @@
-import { GLOBAL_STATE, dispatch } from "../state";
+import { dispatch } from "../state";
 import { Bimp } from "../lib/Bimp";
 import type { GlobalState, ComponentFactory } from "../types";
 

@@ -14,13 +14,10 @@ import type {
 
 let GLOBAL_STATE: GlobalState = {
   editingPalette: false,
-  transforming: false,
 
   activeTool: "brush",
   activeSymbol: 0,
 
-  chartBackground: "#ffffff",
-  symbolPalette: {},
   symbolMap: DEFAULT_SYMBOLS,
   patternLibrary: DEFAULT_PATTERN_LIBRARY,
 
@@ -77,7 +74,6 @@ let GLOBAL_STATE: GlobalState = {
   flipped: false,
 
   // PUNCH CARD
-  punchcardMode: false,
   machine: "th860",
   punchVerticalRepeats: 5,
   rows: 40,
@@ -87,7 +83,6 @@ let GLOBAL_STATE: GlobalState = {
   showLibrary: false,
   showSettings: false,
   showDownload: false,
-  showRepeatLibrary: false,
 
   snapshots: [],
   lastSnapshot: 0,

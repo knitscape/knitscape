@@ -11,8 +11,6 @@ export const MAX_SNAPSHOTS = 50;
 
 export const SNAPSHOT_FIELDS = ["yarnPalette", "yarnSequence", "repeats"] as const;
 
-export const LAYERS = ["chart", "repeats", "yarn"] as const;
-
 export const SYMBOL_PATHS: Record<SymbolName, Path2D> = {
   knit: new Path2D(
     "M 0 0.5 L 0.4 0.5 C 0.7 0.5 0.7 0.2 0.5 0.2 C 0.3 0.2 0.3 0.5 0.6 0.5 L 1 0.5"

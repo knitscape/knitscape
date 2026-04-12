@@ -9,8 +9,6 @@ function editRepeat(
   tool: RepeatToolFn
 ): void {
   let pos = GLOBAL_STATE.repeatPos;
-  dispatch({ transforming: true });
-
   const onMove = tool(0, pos);
   if (!onMove) return;
 
@@ -26,8 +24,6 @@ function editRepeat(
   }
 
   function end(): void {
-    dispatch({ transforming: false });
-
     repeatCanvas.removeEventListener("pointermove", move as EventListener);
     repeatCanvas.removeEventListener("pointerup", end);
     repeatCanvas.removeEventListener("pointerleave", end);
@@ -42,14 +38,11 @@ function resizeRepeat(e: PointerEvent): void {
   const startBitmap = GLOBAL_STATE.repeats[0].bitmap;
   const startPos: Vec2 = [e.clientX, e.clientY];
   const resizeDragger = e.target as HTMLElement;
-  dispatch({ transforming: true });
 
   document.body.classList.add("grabbing");
   resizeDragger.classList.remove("grab");
 
   const end = (): void => {
-    dispatch({ transforming: false });
-
     document.body.classList.remove("grabbing");
 
     window.removeEventListener("pointermove", onmove as EventListener);
