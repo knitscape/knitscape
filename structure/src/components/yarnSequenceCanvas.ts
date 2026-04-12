@@ -24,14 +24,9 @@ export function yarnSequenceCanvas(opts: {
             lastDrawn == null ||
             lastDrawn.pixel(x, height - y - 1) != paletteIndex
           ) {
-            ctx.translate(x * scale, y * scale);
-
             ctx.fillStyle = yarnPalette[paletteIndex];
-
-            ctx.clearRect(0, 0, scale, scale);
-            ctx.fillRect(0, 0, scale, scale);
-
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(x * scale, y * scale, scale, scale);
+            ctx.fillRect(x * scale, y * scale, scale, scale);
           }
         }
       }

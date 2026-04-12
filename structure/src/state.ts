@@ -1,6 +1,7 @@
 import { Bimp } from "./lib/Bimp";
 import {
   SNAPSHOT_INTERVAL,
+  MAX_SNAPSHOTS,
   DEFAULT_PATTERN_LIBRARY,
   DEFAULT_SYMBOLS,
   SNAPSHOT_FIELDS,
@@ -98,6 +99,7 @@ let GLOBAL_STATE: GlobalState = {
 };
 
 function loadWorkspace(workspace: Partial<GlobalState>): void {
+  _needsRender = true;
   GLOBAL_STATE = { ...GLOBAL_STATE, ...workspace };
   GLOBAL_STATE.updateSim = true;
 }
@@ -122,7 +124,7 @@ function snapshotUpdate(action: Partial<GlobalState>): GlobalState {
         SNAPSHOT_FIELDS.map((field) => [field, GLOBAL_STATE[field]])
       ),
       ...GLOBAL_STATE.snapshots,
-    ],
+    ].slice(0, MAX_SNAPSHOTS),
     lastSnapshot: Date.now(),
   };
 
@@ -139,6 +141,7 @@ function updateState(action: Partial<GlobalState>): GlobalState {
 }
 
 function undo(): void {
+  _needsRender = true;
   if (GLOBAL_STATE.snapshots.length < 1) return;
   const changes = Object.keys(GLOBAL_STATE.snapshots[0]);
 
@@ -153,6 +156,7 @@ function undo(): void {
 }
 
 function dispatch(action: Partial<GlobalState>): void {
+  _needsRender = true;
   const changes = Object.keys(action);
   StateMonitor.syncState(updateState(action), changes);
 }
@@ -177,5 +181,16 @@ const StateMonitor = (() => {
     syncState,
   };
 })();
+
+let _needsRender = true;
+
+export const renderState = {
+  get needsRender() {
+    return _needsRender;
+  },
+  consume() {
+    _needsRender = false;
+  },
+};
 
 export { GLOBAL_STATE, undo, dispatch, StateMonitor, loadWorkspace };

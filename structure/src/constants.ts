@@ -7,6 +7,7 @@ export const MAX_SIM_SCALE = 6;
 export const MIN_SIM_SCALE = 0.6;
 
 export const SNAPSHOT_INTERVAL = 1000;
+export const MAX_SNAPSHOTS = 50;
 
 export const SNAPSHOT_FIELDS = ["yarnPalette", "yarnSequence", "repeats"] as const;
 

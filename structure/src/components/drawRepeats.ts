@@ -1,12 +1,38 @@
 import { GLOBAL_STATE } from "../state";
 import { SYMBOL_PATHS, SYMBOL_BITS } from "../constants";
-import type { GlobalState, ComponentFactory, RepeatBlock } from "../types";
+import type { GlobalState, ComponentFactory, SymbolName } from "../types";
 import type { Bimp } from "../lib/Bimp";
 
 function clearLastDrawn(lastDrawn: { bitmap: Bimp | null }[]): void {
   for (const repeat of lastDrawn) {
     repeat.bitmap = null;
   }
+}
+
+function buildSymbolCache(
+  scale: number,
+  lineWidth: number
+): Map<SymbolName, OffscreenCanvas> {
+  const cache = new Map<SymbolName, OffscreenCanvas>();
+  for (const symbol of Object.keys(SYMBOL_PATHS) as SymbolName[]) {
+    const offscreen = new OffscreenCanvas(scale, scale);
+    const octx = offscreen.getContext("2d")!;
+    octx.imageSmoothingEnabled = false;
+    octx.translate(-0.5, -0.5);
+    octx.scale(scale, scale);
+    octx.lineWidth = 0.01 * lineWidth;
+    if (SYMBOL_BITS[symbol]) {
+      octx.fillStyle = "#fff";
+      octx.strokeStyle = "#000";
+    } else {
+      octx.fillStyle = "#000";
+      octx.strokeStyle = "#fff";
+    }
+    octx.fillRect(0, 0, 1, 1);
+    octx.stroke(SYMBOL_PATHS[symbol]);
+    cache.set(symbol, offscreen);
+  }
+  return cache;
 }
 
 export function drawRepeats(): ComponentFactory {
@@ -16,6 +42,8 @@ export function drawRepeats(): ComponentFactory {
     let lastDrawn = repeats.map((repeat) => {
       return { bitmap: null as Bimp | null, pos: [...repeat.pos] };
     });
+
+    let symbolCache = buildSymbolCache(scale, symbolLineWidth);
 
     function scaleAll(
       repeatIndex: number,
@@ -81,17 +109,12 @@ export function drawRepeats(): ComponentFactory {
     }
 
     function draw(repeatIndex: number): void {
-      const ctx = (
-        document.getElementById(
-          `repeat-${repeatIndex}`
-        ) as HTMLCanvasElement
-      ).getContext("2d")!;
+      const canvas = document.getElementById(
+        `repeat-${repeatIndex}`
+      ) as HTMLCanvasElement;
+      const ctx = canvas.getContext("2d")!;
       ctx.imageSmoothingEnabled = false;
-
-      ctx.lineWidth = 0.01 * symbolLineWidth;
-
       ctx.resetTransform();
-      ctx.translate(-0.5, -0.5);
 
       const repeat = repeats[repeatIndex].bitmap;
 
@@ -104,25 +127,11 @@ export function drawRepeats(): ComponentFactory {
             lastDrawn[repeatIndex].bitmap!.pixel(x, y) != paletteIndex
           ) {
             const symbol = symbolMap[paletteIndex];
+            const dx = x * scale;
+            const dy = y * scale;
 
-            ctx.save();
-            ctx.translate(x * scale, y * scale);
-            ctx.scale(scale, scale);
-
-            ctx.clearRect(0, 0, 1, 1);
-
-            if (SYMBOL_BITS[symbol]) {
-              ctx.fillStyle = "#fff";
-              ctx.strokeStyle = "#000";
-            } else {
-              ctx.fillStyle = "#000";
-              ctx.strokeStyle = "#fff";
-            }
-            ctx.fillRect(0, 0, 1, 1);
-
-            ctx.stroke(SYMBOL_PATHS[symbol]);
-
-            ctx.restore();
+            ctx.clearRect(dx, dy, scale, scale);
+            ctx.drawImage(symbolCache.get(symbol)!, dx, dy);
           }
         }
       }
@@ -153,13 +162,19 @@ export function drawRepeats(): ComponentFactory {
           drawAll();
         }
 
-        if (symbolLineWidth != state.symbolLineWidth) {
+        if (
+          symbolLineWidth != state.symbolLineWidth ||
+          symbolMap != state.symbolMap
+        ) {
           symbolLineWidth = state.symbolLineWidth;
+          symbolMap = state.symbolMap;
+          symbolCache = buildSymbolCache(scale, symbolLineWidth);
           clearLastDrawn(lastDrawn);
         }
 
         if (scale != state.scale) {
           scale = state.scale;
+          symbolCache = buildSymbolCache(scale, symbolLineWidth);
           clearLastDrawn(lastDrawn);
 
           for (

@@ -1,7 +1,7 @@
 import { render } from "lit-html";
 import Split from "split.js";
 
-import { StateMonitor } from "./state";
+import { StateMonitor, renderState } from "./state";
 
 import { fitChart } from "./actions/zoomFit";
 
@@ -46,7 +46,10 @@ let symbolCanvas: HTMLCanvasElement,
   repeatLibrary: HTMLElement;
 
 function r(): void {
-  render(view(), document.body);
+  if (renderState.needsRender) {
+    renderState.consume();
+    render(view(), document.body);
+  }
   window.requestAnimationFrame(r);
 }
 

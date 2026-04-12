@@ -33,18 +33,17 @@ export class Bimp {
   }
 
   overlay(overlayBimp: Bimp, pos: Vec2): Bimp {
-    const changes: PixelChange[] = [];
+    const copy = this.pixels.slice();
     for (let y = 0; y < overlayBimp.height; y++) {
       for (let x = 0; x < overlayBimp.width; x++) {
-        changes.push({
-          x: pos[0] + x,
-          y: pos[1] + overlayBimp.height - y - 1,
-          color: overlayBimp.pixel(x, y),
-        });
+        const tx = pos[0] + x;
+        const ty = pos[1] + overlayBimp.height - y - 1;
+        if (tx >= 0 && tx < this.width && ty >= 0 && ty < this.height) {
+          copy[tx + ty * this.width] = overlayBimp.pixels[x + y * overlayBimp.width];
+        }
       }
     }
-
-    return this.draw(changes);
+    return new Bimp(this.width, this.height, copy);
   }
 
   toJSON(): BimpJSON {
