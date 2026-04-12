@@ -13,7 +13,7 @@ export function blocks() {
   return blocks.map(
     (block, blockIndex) =>
       html`<div
-        class="block"
+        class="chart-block"
         style="left: ${Math.round(block.pos[0] * cellWidth) -
         1}px; bottom: ${Math.round(block.pos[1] * cellHeight)}px;">
         <canvas

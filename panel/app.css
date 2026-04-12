@@ -669,7 +669,7 @@ input[type="range"]:focus::-moz-range-thumb {
 /* ─── Blocks ─────────────────────────────────────────────────────────────── */
 
 @layer components {
-  .block {
+  .chart-block {
     @apply absolute flex items-center justify-center;
     outline: 1px solid black;
   }
@@ -679,7 +679,7 @@ input[type="range"]:focus::-moz-range-thumb {
     box-shadow: 0 0 5px 0 black inset;
   }
 
-  .block:hover .hover-overlay {
+  .chart-block:hover .hover-overlay {
     @apply opacity-100;
   }
 
@@ -691,9 +691,10 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .move-block {
-    @apply cursor-grab absolute leading-none text-[0.9em] p-[0.3em] border border-black rounded-[0.5em];
+    @apply cursor-grab absolute leading-none text-[0.9em] p-[0.3em] border border-black rounded-[0.5em] bg-base-3;
     right: 100%;
     top: 100%;
+    box-shadow: 0 0 2px 0 black;
   }
 
   .grabbing .dragger,
@@ -702,7 +703,8 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .dragger {
-    @apply absolute leading-none cursor-grab inline-flex items-center border border-black justify-center;
+    @apply absolute leading-none cursor-grab inline-flex items-center border border-black justify-center bg-base-3;
+    box-shadow: 0 0 2px 0 black;
   }
 
   .dragger.up {

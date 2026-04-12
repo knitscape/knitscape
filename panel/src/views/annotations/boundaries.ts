@@ -72,7 +72,7 @@ export function boundaryBlocks() {
   const { pos } = regions[selectedBoundary];
 
   return html`<div
-    class="block"
+    class="chart-block"
     style="left: ${Math.round(pos[0] * cellWidth)}px; bottom: ${Math.round(
       pos[1] * cellHeight
     )}px;">

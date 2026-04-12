@@ -72,7 +72,7 @@ export function pathTiles() {
   const { offset, pts } = paths[selectedPath];
 
   return html`<div
-    class="block"
+    class="chart-block"
     style="left: ${Math.round(
       (pts[0][0] + offset[0]) * cellWidth
     )}px; bottom: ${Math.round((pts[0][1] + offset[1]) * cellHeight)}px;">

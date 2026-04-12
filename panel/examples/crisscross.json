@@ -1,5 +1,5 @@
 {
-  "annotations": true,
+  "annotations": false,
   "simLive": true,
   "cellAspect": 0.6363636363636364,
   "yarnPalette": [
