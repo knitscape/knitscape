@@ -8,12 +8,13 @@ import type { GlobalState, ComponentFactory } from "../types";
 let stopSim: (() => void) | undefined;
 let relax: (() => void) | undefined;
 let reset: (() => void) | undefined;
+let rescale: ((newScale: number) => void) | undefined;
 
 export function simulationView() {
   return html`<div id="sim-pane">
     <div id="sim-container">
       <div
-        style="transform: translate(${GLOBAL_STATE.simPan[0]}px, ${GLOBAL_STATE.simPan[1]}px) scale(${GLOBAL_STATE.simScale}); transform-origin: 0px 0px"
+        style="transform: translate(${GLOBAL_STATE.simPan[0]}px, ${GLOBAL_STATE.simPan[1]}px)"
         class=${GLOBAL_STATE.flipped ? "mirrored" : ""}>
         <canvas
           id="back"
@@ -82,10 +83,11 @@ export function runSimulation(): ComponentFactory {
 
       if (stopSim) stopSim();
 
-      ({ stopSim, relax, reset } = simulate(
+      ({ stopSim, relax, reset, rescale } = simulate(
         GLOBAL_STATE.chart,
         GLOBAL_STATE.yarnSequence.pixels,
-        GLOBAL_STATE.yarnPalette
+        GLOBAL_STATE.yarnPalette,
+        GLOBAL_STATE.simScale
       ));
     }
 
@@ -101,6 +103,10 @@ export function runSimulation(): ComponentFactory {
 
         if (found) {
           debouncedRun();
+        }
+
+        if (changes!.includes("simScale")) {
+          rescale!(state.simScale);
         }
       },
     };

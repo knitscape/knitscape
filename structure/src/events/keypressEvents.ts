@@ -24,10 +24,6 @@ const hotkeys: Record<string, () => void> = {
       showDownload: false,
       showRepeatLibrary: false,
     }),
-  d: () =>
-    dispatch({
-      debug: !GLOBAL_STATE.debug,
-    }),
 };
 
 function symbolSwitch(index: number): void {

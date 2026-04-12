@@ -26,8 +26,9 @@ const dpi = devicePixelRatio;
 export function simulate(
   pattern: Bimp,
   yarnSequence: Uint8ClampedArray,
-  palette: string[]
-): { stopSim: () => void; relax: () => void; reset: () => void } {
+  palette: string[],
+  scale: number
+): { stopSim: () => void; relax: () => void; reset: () => void; rescale: (newScale: number) => void } {
   let relaxed = false;
   let yarnWidth: number, stitchHeight: number, sim: d3.Simulation<any, any>;
   const yarnSet = new Set(yarnSequence);
@@ -236,19 +237,47 @@ export function simulate(
     draw();
   }
 
+  function rescale(newScale: number): void {
+    const ratio = newScale / scale;
+    scale = newScale;
+    canvasWidth = dpi * bbox.width * scale;
+    canvasHeight = dpi * bbox.height * scale;
+
+    [backCanvas, midCanvas, frontCanvas].forEach((canvas) => {
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      canvas.style.cssText = `width: ${bbox.width * scale}px; height: ${bbox.height * scale}px;`;
+    });
+
+    nodes.forEach((node) => {
+      node.x! *= ratio;
+      node.y! *= ratio;
+    });
+
+    // Recompute scale-dependent drawing metrics
+    const stitchWidth = Math.min(
+      (canvasWidth * 0.9) / stitchPattern.width,
+      ((canvasHeight * 0.9) / stitchPattern.height) * STITCH_RATIO
+    );
+    stitchHeight = stitchWidth / STITCH_RATIO;
+    yarnWidth = stitchWidth * YARN_RATIO;
+
+    draw();
+  }
+
   const stitchPattern = new Pattern(pattern.pad(X_PADDING, Y_PADDING, 0));
 
   const bbox = document.getElementById("sim-container")!.getBoundingClientRect();
 
-  const canvasWidth = dpi * bbox.width;
-  const canvasHeight = dpi * bbox.height;
+  let canvasWidth = dpi * bbox.width * scale;
+  let canvasHeight = dpi * bbox.height * scale;
 
   function getCanvases(canvasIDs: string[]): HTMLCanvasElement[] {
     return canvasIDs.map((canvasID) => {
       const canvas = document.getElementById(canvasID) as HTMLCanvasElement;
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
-      canvas.style.cssText = `width: ${bbox.width}px; height: ${bbox.height}px;`;
+      canvas.style.cssText = `width: ${bbox.width * scale}px; height: ${bbox.height * scale}px;`;
       return canvas;
     });
   }
@@ -274,5 +303,5 @@ export function simulate(
   const yarnPathLinks = yarnGraph.yarnPathToLinks();
   draw();
 
-  return { relax, stopSim, reset };
+  return { relax, stopSim, reset, rescale };
 }

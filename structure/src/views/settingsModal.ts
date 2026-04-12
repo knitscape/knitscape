@@ -28,16 +28,6 @@ export function settingsModal() {
         Grid
       </label>
 
-      <label class="form-control toggle">
-        <input
-          type="checkbox"
-          name="debug"
-          ?checked=${GLOBAL_STATE.debug}
-          @change=${(e: Event) =>
-            dispatch({ debug: (e.target as HTMLInputElement).checked })} />
-        Debug
-      </label>
-
       <label class="form-control range">
         Symbol Line Width
         <input
@@ -46,7 +36,6 @@ export function settingsModal() {
           min="1"
           max="10"
           .value=${String(GLOBAL_STATE.symbolLineWidth)}
-          ?checked=${GLOBAL_STATE.debug}
           @input=${(e: Event) =>
             dispatch({
               symbolLineWidth: Number((e.target as HTMLInputElement).value),

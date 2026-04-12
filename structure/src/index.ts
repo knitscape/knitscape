@@ -3,7 +3,7 @@ import Split from "split.js";
 
 import { StateMonitor, renderState } from "./state";
 
-import { fitChart } from "./actions/zoomFit";
+import { fitChart, fitSimulation } from "./actions/zoomFit";
 
 import { view } from "./views/view";
 
@@ -42,8 +42,7 @@ let symbolCanvas: HTMLCanvasElement,
   repeatContainer: HTMLElement,
   yarnSequenceEditorCanvas: HTMLCanvasElement,
   colorDragger: HTMLElement,
-  simContainer: HTMLElement,
-  repeatLibrary: HTMLElement;
+  simContainer: HTMLElement;
 
 function r(): void {
   if (renderState.needsRender) {
@@ -100,7 +99,6 @@ function init(): void {
   desktop = document.getElementById("desktop")!;
   repeatContainer = document.getElementById("repeat-container")!;
   simContainer = document.getElementById("sim-container")!;
-  repeatLibrary = document.getElementById("repeat-library")!;
   colorDragger = document.getElementById("color-dragger")!;
 
   Split(["#chart-pane", "#sim-pane"], {
@@ -127,6 +125,7 @@ function init(): void {
 
   measureWindow();
   fitChart();
+  fitSimulation();
 }
 
 window.onload = init;

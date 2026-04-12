@@ -102,7 +102,6 @@ export interface GlobalState {
   showSettings: boolean;
   showDownload: boolean;
   showRepeatLibrary: boolean;
-  debug: boolean;
 
   snapshots: Record<string, unknown>[];
   lastSnapshot: number;

@@ -1,6 +1,6 @@
 import { Bimp } from "../lib/Bimp";
 import { GLOBAL_STATE, dispatch } from "../state";
-import { fitChart } from "./zoomFit";
+import { fitChart, fitSimulation } from "./zoomFit";
 import { getRandomColor } from "../utils";
 import type { PatternJSON } from "../types";
 
@@ -17,6 +17,7 @@ function loadJSON(patternJSON: PatternJSON): void {
   });
 
   fitChart();
+  fitSimulation();
 }
 
 export function newPattern(): void {
@@ -35,6 +36,7 @@ export function newPattern(): void {
     ],
   });
   fitChart();
+  fitSimulation();
 }
 
 export function loadLibraryPattern(path: string): void {

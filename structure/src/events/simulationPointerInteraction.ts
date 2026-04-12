@@ -45,7 +45,7 @@ export function simulationPointerInteraction(simContainer: HTMLElement): void {
     }
 
     zoomSimulationAtPoint(
-      [(e.clientX - bounds.left) / 2, (e.clientY - bounds.top) / 2],
+      [e.clientX - bounds.left, e.clientY - bounds.top],
       simScale
     );
   });

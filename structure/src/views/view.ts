@@ -7,7 +7,6 @@ import { downloadModal } from "./downloadModal";
 import { libraryModal } from "./libraryModal";
 import { settingsModal } from "./settingsModal";
 import { chartTools } from "./chartTools";
-import { debugPane } from "./debugPane";
 import { leftBar } from "./leftBar";
 import { repeatCanvas } from "./repeatCanvas";
 
@@ -47,6 +46,5 @@ export function view() {
       </div>
       ${simulationView()}
     </div>
-    ${when(GLOBAL_STATE.debug, debugPane)}
   `;
 }

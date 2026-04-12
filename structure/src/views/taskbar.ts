@@ -1,6 +1,6 @@
 import { html } from "lit-html";
 import { GLOBAL_STATE, dispatch, undo } from "../state";
-import { toggleFullscreen, fitChart } from "../actions/zoomFit";
+import { toggleFullscreen, fitChart, fitSimulation } from "../actions/zoomFit";
 import { newPattern, uploadFile } from "../actions/importers";
 
 function updateChartWidth(newWidth: number): void {
@@ -11,6 +11,7 @@ function updateChartWidth(newWidth: number): void {
   });
 
   fitChart();
+  fitSimulation();
 }
 
 function updateChartHeight(newHeight: number): void {
@@ -20,6 +21,7 @@ function updateChartHeight(newHeight: number): void {
   });
 
   fitChart();
+  fitSimulation();
 }
 
 export function taskbar() {

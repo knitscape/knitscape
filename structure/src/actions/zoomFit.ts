@@ -73,6 +73,10 @@ export function zoomAtPoint(pt: Vec2, scale: number): void {
   });
 }
 
+export function fitSimulation(): void {
+  dispatch({ simScale: 1, simPan: [0, 0] });
+}
+
 export function fitChart(): void {
   const { width, height } = devicePixelBoundingBox(
     document.getElementById("desktop")!

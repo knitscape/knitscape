@@ -88,7 +88,6 @@ let GLOBAL_STATE: GlobalState = {
   showSettings: false,
   showDownload: false,
   showRepeatLibrary: false,
-  debug: false,
 
   snapshots: [],
   lastSnapshot: 0,
