@@ -1,5 +1,5 @@
 import { dispatch } from "../state";
-import { Bimp } from "../lib/Bimp";
+import { Bimp } from "../../../shared/Bimp";
 import type { GlobalState, ComponentFactory } from "../types";
 
 export function generateChart(): ComponentFactory {

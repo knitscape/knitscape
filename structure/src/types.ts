@@ -1,16 +1,10 @@
-import type { Bimp } from "./lib/Bimp";
+import type { Bimp, BimpJSON } from "../../shared/Bimp";
 
 export type Vec2 = [number, number];
 
 export type SymbolName = "knit" | "purl" | "slip" | "tuck";
 
 export type ToolName = "brush" | "flood" | "rect" | "line" | "shift" | "move";
-
-export interface PixelChange {
-  x: number;
-  y: number;
-  color: number;
-}
 
 export interface RepeatBlock {
   bitmap: Bimp;
@@ -37,11 +31,7 @@ export type ComponentFactory = (init: {
 
 export type DispatchFn = (action: Partial<GlobalState>) => void;
 
-export interface BimpJSON {
-  width: number;
-  height: number;
-  pixels: number[];
-}
+export type { BimpJSON };
 
 export interface PatternJSON {
   width: number;

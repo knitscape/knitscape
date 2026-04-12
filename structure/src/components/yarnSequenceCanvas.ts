@@ -1,6 +1,6 @@
 import { sizeCanvasToBitmap } from "./resizeCanvases";
 import type { GlobalState, ComponentFactory } from "../types";
-import type { Bimp } from "../lib/Bimp";
+import type { Bimp } from "../../../shared/Bimp";
 
 export function yarnSequenceCanvas(opts: {
   canvas: HTMLCanvasElement;

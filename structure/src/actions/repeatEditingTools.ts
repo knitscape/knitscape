@@ -1,5 +1,5 @@
 import { GLOBAL_STATE, dispatch } from "../state";
-import type { Bimp } from "../lib/Bimp";
+import type { Bimp } from "../../../shared/Bimp";
 import type { Vec2 } from "../types";
 
 function dispatchRepeatBitmap(repeatIndex: number, bitmap: Bimp): void {

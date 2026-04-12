@@ -1,6 +1,6 @@
 import { SYMBOL_PATHS, SYMBOL_BITS } from "../constants";
 import type { GlobalState, ComponentFactory, SymbolName } from "../types";
-import type { Bimp } from "../lib/Bimp";
+import type { Bimp } from "../../../shared/Bimp";
 
 function buildSymbolCache(
   scale: number,

@@ -1,4 +1,4 @@
-import { Bimp } from "../lib/Bimp";
+import { Bimp } from "../../../shared/Bimp";
 import { GLOBAL_STATE, dispatch } from "../state";
 import { fitChart, fitSimulation } from "./zoomFit";
 import { getRandomColor } from "../utils";

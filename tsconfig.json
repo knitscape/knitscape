@@ -13,6 +13,6 @@
     "jsx": "preserve",
     "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": ["structure/src/**/*.ts"],
+  "include": ["structure/src/**/*.ts", "panel/src/**/*.ts", "shared/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
