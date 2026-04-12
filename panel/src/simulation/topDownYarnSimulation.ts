@@ -23,8 +23,20 @@ const YARN_DIAMETER = 0.27;
 const STITCH_WIDTH = 1;
 const BED_OFFSET = 0.1;
 
-export function simulate(stitchPattern: StitchPatternType) {
-  const ASPECT = GLOBAL_STATE.cellAspect;
+export interface SimulateOptions {
+  canvas?: HTMLCanvasElement;
+  yarnPalette?: string[];
+  cellAspect?: number;
+}
+
+export function simulate(
+  stitchPattern: StitchPatternType,
+  options?: SimulateOptions
+) {
+  const ASPECT =
+    options?.cellAspect !== undefined
+      ? options.cellAspect
+      : GLOBAL_STATE.cellAspect;
   const params = {
     YARN_RADIUS: YARN_DIAMETER / 2,
     STITCH_WIDTH,
@@ -32,7 +44,9 @@ export function simulate(stitchPattern: StitchPatternType) {
     BED_OFFSET,
   };
 
-  let canvas = document.getElementById("sim-canvas") as HTMLCanvasElement;
+  let canvas =
+    options?.canvas ??
+    (document.getElementById("sim-canvas") as HTMLCanvasElement);
   let relaxed = false;
   let sim: ReturnType<typeof yarnRelaxation> | undefined;
 
@@ -48,7 +62,8 @@ export function simulate(stitchPattern: StitchPatternType) {
     params
   );
 
-  const yarnPalette = GLOBAL_STATE.yarnPalette ?? [];
+  const yarnPalette =
+    options?.yarnPalette ?? GLOBAL_STATE.yarnPalette ?? [];
   const yarnData = Object.entries(segments).map(([yarnIndex, segmentArr]) => {
     return {
       yarnIndex: yarnIndex,

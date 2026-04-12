@@ -1,0 +1,253 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  --base0: #0e0e0e;
+  --base1: #1a1a1a;
+  --base2: #2b2b2b;
+  --base3: #3c3c3c;
+  --base4: #4d4d4d;
+  --base5: #5e5e5e;
+  --base6: #6f6f6f;
+  --base7: #8a8a8a;
+  --base8: #9b9b9b;
+  --base9: #a1a1a1;
+  --base10: #b2b2b2;
+  --base11: #c3c3c3;
+  --base12: #d4d4d4;
+  --base13: #e5e5e5;
+
+  --accent-h: 316;
+  --accent-s: 29%;
+  --accent-l: 64%;
+  --accent: hsla(var(--accent-h), var(--accent-s), var(--accent-l));
+}
+
+/* ─── Global ─────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "National Park";
+  src: url("/assets/fonts/NP-VariableVF.woff2")
+      format("woff2 supports variations"),
+    url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font-family: "National Park", sans-serif;
+  background-color: var(--base2);
+  color: var(--base12);
+  -webkit-font-smoothing: antialiased;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+}
+
+/* ─── Toolbar ────────────────────────────────────────────────────────────── */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--base1);
+  border-bottom: 1px solid var(--base3);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+#toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+#toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--base4);
+  flex-shrink: 0;
+}
+
+/* ─── Button styles ──────────────────────────────────────────────────────── */
+
+button {
+  font-family: inherit;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0.25rem 0.55rem;
+  background: var(--base3);
+  color: var(--base12);
+  transition: background 80ms;
+}
+
+button:hover {
+  background: var(--base4);
+}
+
+button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.run-btn {
+  background: var(--accent);
+  color: #fff;
+  font-variation-settings: "wght" 600;
+  padding: 0.25rem 0.75rem;
+}
+
+button.run-btn:hover {
+  filter: brightness(1.1);
+}
+
+.btn-group {
+  display: flex;
+  gap: 1px;
+}
+
+.btn-group button {
+  border-radius: 0;
+}
+
+.btn-group button:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.btn-group button:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+/* ─── Main layout ────────────────────────────────────────────────────────── */
+
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#editor-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+#preview-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--base1);
+  position: relative;
+}
+
+/* ─── Code editor ────────────────────────────────────────────────────────── */
+
+#code-editor {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  padding: 0.75rem 1rem;
+  background: var(--base0);
+  color: var(--base12);
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+#code-editor::selection {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Preview canvases ───────────────────────────────────────────────────── */
+
+#chart-canvas-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 1rem;
+}
+
+#chart-canvas-wrap.hidden,
+#sim-canvas-wrap.hidden {
+  display: none;
+}
+
+#sim-canvas-wrap {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+#sim-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Split gutter ───────────────────────────────────────────────────────── */
+
+.gutter {
+  background: var(--base3);
+  cursor: col-resize;
+  flex-shrink: 0;
+}
+
+.gutter:hover {
+  background: var(--base4);
+}
+
+/* ─── Status bar ─────────────────────────────────────────────────────────── */
+
+#status-bar {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  background: var(--base1);
+  border-top: 1px solid var(--base3);
+  color: var(--base7);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 1.7rem;
+}
+
+#status-bar.error {
+  color: #f87171;
+}
+
+#status-bar.ok {
+  color: #4ade80;
+}

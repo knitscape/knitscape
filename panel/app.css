@@ -184,7 +184,7 @@ canvas {
   }
 
   .radio-group span {
-    @apply italic px-[0.4em];
+    @apply italic px-[0.4em] whitespace-nowrap;
   }
 
   .radio-group button {
@@ -385,7 +385,7 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .chart-bottom-bar {
-    @apply flex justify-between items-center w-full gap-[0.4em] py-[0.2em] pl-[0.4em] text-[0.9em];
+    @apply flex justify-between items-center w-full gap-[0.4em] py-[0.2em] pl-[0.4em] text-[0.9em] overflow-hidden;
   }
 
   .h-group {
@@ -490,6 +490,11 @@ input[type="range"]:focus::-moz-range-thumb {
 /* ─── Simulation pane ────────────────────────────────────────────────────── */
 
 @layer components {
+  #viz-container {
+    min-height: 0;
+    overflow: hidden;
+  }
+
   #sim-canvas {
     @apply w-full h-full;
   }
@@ -499,7 +504,7 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .sim-toolbar {
-    @apply bg-base-1 text-base-7 flex justify-between gap-[0.4em] py-[0.2em] pr-[0.4em] text-[0.9em];
+    @apply bg-base-1 text-base-7 flex justify-between gap-[0.4em] py-[0.2em] pr-[0.4em] text-[0.9em] overflow-hidden;
   }
 }
 
@@ -662,7 +667,8 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .add-block {
-    @apply z-[1] p-[5px] leading-none cursor-pointer whitespace-nowrap;
+    @apply z-[1] p-[5px] leading-none cursor-pointer whitespace-nowrap bg-base-3;
+    box-shadow: 0 0 2px 0 black;
   }
 }
 
