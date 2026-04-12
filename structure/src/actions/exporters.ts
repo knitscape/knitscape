@@ -133,8 +133,8 @@ export function downloadJSON(): void {
       JSON.stringify({
         width: GLOBAL_STATE.chart.width,
         height: GLOBAL_STATE.chart.height,
-        repeats: GLOBAL_STATE.repeats.map(({ bitmap, pos, area }) => {
-          return { bitmap: bitmap.toJSON(), pos, area };
+        repeats: GLOBAL_STATE.repeats.map(({ bitmap }) => {
+          return { bitmap: bitmap.toJSON() };
         }),
         yarnPalette: GLOBAL_STATE.yarnPalette,
         yarnSequence: GLOBAL_STATE.yarnSequence.toJSON(),

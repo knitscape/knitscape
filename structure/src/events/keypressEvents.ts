@@ -22,7 +22,6 @@ const hotkeys: Record<string, () => void> = {
       showLibrary: false,
       showSettings: false,
       showDownload: false,
-      editingRepeat: -1,
       showRepeatLibrary: false,
     }),
   d: () =>

@@ -26,9 +26,8 @@ const dpi = devicePixelRatio;
 export function simulate(
   pattern: Bimp,
   yarnSequence: Uint8ClampedArray,
-  palette: string[],
-  scale: number
-): { stopSim: () => void; relax: () => void } {
+  palette: string[]
+): { stopSim: () => void; relax: () => void; reset: () => void } {
   let relaxed = false;
   let yarnWidth: number, stitchHeight: number, sim: d3.Simulation<any, any>;
   const yarnSet = new Set(yarnSequence);
@@ -230,21 +229,26 @@ export function simulate(
     if (sim) sim.stop();
   }
 
+  function reset(): void {
+    if (sim) sim.stop();
+    relaxed = false;
+    layoutNodes(yarnGraph);
+    draw();
+  }
+
   const stitchPattern = new Pattern(pattern.pad(X_PADDING, Y_PADDING, 0));
 
   const bbox = document.getElementById("sim-container")!.getBoundingClientRect();
 
-  const width = bbox.width * scale;
-  const height = bbox.height * scale;
-  const canvasWidth = dpi * width;
-  const canvasHeight = dpi * height;
+  const canvasWidth = dpi * bbox.width;
+  const canvasHeight = dpi * bbox.height;
 
   function getCanvases(canvasIDs: string[]): HTMLCanvasElement[] {
     return canvasIDs.map((canvasID) => {
       const canvas = document.getElementById(canvasID) as HTMLCanvasElement;
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
-      canvas.style.cssText = `width: ${width}px; height: ${height}px;`;
+      canvas.style.cssText = `width: ${bbox.width}px; height: ${bbox.height}px;`;
       return canvas;
     });
   }
@@ -270,5 +274,5 @@ export function simulate(
   const yarnPathLinks = yarnGraph.yarnPathToLinks();
   draw();
 
-  return { relax, stopSim };
+  return { relax, stopSim, reset };
 }

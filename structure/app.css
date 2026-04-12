@@ -648,6 +648,15 @@ input[type="range"]:focus::-moz-range-thumb {
   @apply cursor-pointer self-auto;
 }
 
+.panzoom-controls .btn.current {
+  background-color: var(--accent);
+  @apply text-base-2;
+}
+
+.toolbar-divider {
+  @apply w-px self-stretch bg-current opacity-20 mx-[0.2em];
+}
+
 /* ─── Chart size controls ────────────────────────────────────────────────── */
 
 #chart-size-controls {

@@ -39,9 +39,7 @@ export function drawRepeats(): ComponentFactory {
   return ({ state }) => {
     let { scale, symbolMap, repeats, symbolLineWidth } = state;
 
-    let lastDrawn = repeats.map((repeat) => {
-      return { bitmap: null as Bimp | null, pos: [...repeat.pos] };
-    });
+    let lastDrawn = repeats.map(() => ({ bitmap: null as Bimp | null }));
 
     let symbolCache = buildSymbolCache(scale, symbolLineWidth);
 
@@ -139,9 +137,7 @@ export function drawRepeats(): ComponentFactory {
     }
 
     function drawAll(): void {
-      lastDrawn = repeats.map((repeat) => {
-        return { bitmap: null as Bimp | null, pos: [...repeat.pos] };
-      });
+      lastDrawn = repeats.map(() => ({ bitmap: null as Bimp | null }));
       for (let repeatIndex = 0; repeatIndex < repeats.length; repeatIndex++) {
         scaleAll(
           repeatIndex,

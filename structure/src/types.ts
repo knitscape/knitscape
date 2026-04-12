@@ -14,8 +14,6 @@ export interface PixelChange {
 
 export interface RepeatBlock {
   bitmap: Bimp;
-  pos: Vec2;
-  area: Vec2;
 }
 
 export interface RepeatLibraryItem {
@@ -52,8 +50,6 @@ export interface PatternJSON {
   yarnSequence: BimpJSON;
   repeats: {
     bitmap: BimpJSON;
-    pos: Vec2;
-    area: Vec2;
   }[];
 }
 
@@ -82,7 +78,6 @@ export interface GlobalState {
   yarnPalette: string[];
   yarnSequence: Bimp;
 
-  editingRepeat: number;
   repeatPos: Vec2;
 
   repeats: RepeatBlock[];

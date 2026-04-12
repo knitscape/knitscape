@@ -11,13 +11,9 @@ function loadJSON(patternJSON: PatternJSON): void {
     yarnPalette,
     yarnSequence: Bimp.fromJSON(yarnSequence),
     chart: Bimp.empty(width, height, 0),
-    repeats: repeats.map(({ bitmap, pos, area }) => {
-      return {
-        bitmap: Bimp.fromJSON(bitmap),
-        pos,
-        area,
-      };
-    }),
+    repeats: repeats.map(({ bitmap }) => ({
+      bitmap: Bimp.fromJSON(bitmap),
+    })),
   });
 
   fitChart();
@@ -35,8 +31,6 @@ export function newPattern(): void {
           4,
           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         ),
-        area: [30, 40],
-        pos: [0, 0],
       },
     ],
   });

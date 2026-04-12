@@ -1,6 +1,6 @@
 import { html } from "lit-html";
 import { when } from "lit-html/directives/when.js";
-import { dispatch, GLOBAL_STATE } from "../state";
+import { GLOBAL_STATE } from "../state";
 
 import { taskbar } from "./taskbar";
 import { downloadModal } from "./downloadModal";
@@ -10,7 +10,6 @@ import { chartTools } from "./chartTools";
 import { debugPane } from "./debugPane";
 import { leftBar } from "./leftBar";
 import { repeatCanvas } from "./repeatCanvas";
-import { repeatTools } from "./repeatTools";
 
 import { simulationView } from "../components/runSimulation";
 
@@ -26,7 +25,6 @@ export function view() {
           ${leftBar()}
 
           <div id="desktop">
-            ${when(GLOBAL_STATE.editingRepeat > -1, repeatTools)}
             <div
               id="canvas-transform-group"
               style="transform: translate(${Math.floor(

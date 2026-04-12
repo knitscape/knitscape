@@ -1,4 +1,3 @@
-import { GLOBAL_STATE } from "../state";
 import type { GlobalState, ComponentFactory, Vec2 } from "../types";
 
 export function drawOutline(
@@ -14,7 +13,7 @@ export function drawOutline(
     function draw(): void {
       const ctx = outlineCanvas.getContext("2d")!;
 
-      if (pos[0] < 0 || pos[1] < 0 || GLOBAL_STATE.editingRepeat >= 0) {
+      if (pos[0] < 0 || pos[1] < 0) {
         ctx.clearRect(0, 0, outlineCanvas.width, outlineCanvas.height);
         return;
       }

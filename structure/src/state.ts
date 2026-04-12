@@ -39,7 +39,6 @@ let GLOBAL_STATE: GlobalState = {
   ],
   yarnSequence: new Bimp(1, 8, [1, 1, 1, 1, 2, 2, 0, 0]),
 
-  editingRepeat: -1,
   repeatPos: [-1, -1],
 
   repeats: [
@@ -52,8 +51,6 @@ let GLOBAL_STATE: GlobalState = {
           0, 0, 0, 3, 0, 0, 0, 3, 0, 0,
         ]
       ),
-      pos: [0, 0],
-      area: [48, 60],
     },
   ],
 

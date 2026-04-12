@@ -1,10 +1,8 @@
 import { html } from "lit-html";
 import { GLOBAL_STATE, dispatch } from "../state";
-import { LAYERS } from "../constants";
 import { getRandomColor, shuffle } from "../utils";
 import jscolor from "@eastdesire/jscolor";
 import { Bimp } from "../lib/Bimp";
-import type { Vec2 } from "../types";
 
 function symbolPicker() {
   return html` <div id="symbol-picker">
@@ -166,27 +164,8 @@ function yarnPicker() {
   </div>`;
 }
 
-function addRepeat(): void {
-  const newBitmap = Bimp.empty(2, 2, 0);
-
-  dispatch({
-    repeats: [
-      ...GLOBAL_STATE.repeats,
-      {
-        bitmap: newBitmap,
-        area: [newBitmap.width, newBitmap.height] as Vec2,
-        pos: [0, 0] as Vec2,
-      },
-    ],
-    editingRepeat: GLOBAL_STATE.repeats.length,
-  });
-}
-
 export function leftBar() {
   return html`<div id="left-bar" class="scroller">
-    <button class="btn solid add-repeat" @click=${() => addRepeat()}>
-      <i class="fa-solid fa-plus"></i>
-    </button>
     ${symbolPicker()} ${yarnPicker()}
   </div>`;
 }

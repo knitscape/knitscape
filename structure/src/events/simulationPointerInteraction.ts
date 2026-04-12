@@ -51,8 +51,6 @@ export function simulationPointerInteraction(simContainer: HTMLElement): void {
   });
 
   simContainer.addEventListener("pointerdown", (e: PointerEvent) => {
-    dispatch({ editingRepeat: -1 });
-
     pan(e, simContainer);
   });
 }

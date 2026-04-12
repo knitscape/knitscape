@@ -7,13 +7,13 @@ import type { GlobalState, ComponentFactory } from "../types";
 
 let stopSim: (() => void) | undefined;
 let relax: (() => void) | undefined;
+let reset: (() => void) | undefined;
 
 export function simulationView() {
   return html`<div id="sim-pane">
     <div id="sim-container">
       <div
-        style="transform: translate(${GLOBAL_STATE.simPan[0]}px, ${GLOBAL_STATE
-          .simPan[1]}px)"
+        style="transform: translate(${GLOBAL_STATE.simPan[0]}px, ${GLOBAL_STATE.simPan[1]}px) scale(${GLOBAL_STATE.simScale}); transform-origin: 0px 0px"
         class=${GLOBAL_STATE.flipped ? "mirrored" : ""}>
         <canvas
           id="back"
@@ -26,6 +26,7 @@ export function simulationView() {
     </div>
     <div id="sim-controls" class="panzoom-controls">
       <button @click=${relax} class="btn solid">relax</button>
+      <button @click=${reset} class="btn solid">reset</button>
       <button
         @click=${() => dispatch({ flipped: !GLOBAL_STATE.flipped })}
         class="btn solid">
@@ -81,11 +82,10 @@ export function runSimulation(): ComponentFactory {
 
       if (stopSim) stopSim();
 
-      ({ stopSim, relax } = simulate(
+      ({ stopSim, relax, reset } = simulate(
         GLOBAL_STATE.chart,
         GLOBAL_STATE.yarnSequence.pixels,
-        GLOBAL_STATE.yarnPalette,
-        GLOBAL_STATE.simScale
+        GLOBAL_STATE.yarnPalette
       ));
     }
 
@@ -101,10 +101,6 @@ export function runSimulation(): ComponentFactory {
 
         if (found) {
           debouncedRun();
-        }
-
-        if (changes!.includes("simScale")) {
-          run();
         }
       },
     };
