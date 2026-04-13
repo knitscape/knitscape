@@ -33,6 +33,9 @@ export function simulate(
   let canvas = options.canvas;
   let relaxed = false;
   let sim: ReturnType<typeof yarnRelaxation> | undefined;
+  let lastTickMs = 0;
+
+  const t0 = performance.now();
 
   const { DS, yarnPath } = generateTopology(stitchPattern);
 
@@ -45,6 +48,8 @@ export function simulate(
     nodes,
     params
   );
+
+  const topologyMs = performance.now() - t0;
 
   const yarnPalette = options.yarnPalette;
   const yarnData = Object.entries(segments).map(([yarnIndex, segmentArr]) => {
@@ -62,6 +67,7 @@ export function simulate(
 
   function draw() {
     if (sim && sim.running()) {
+      const tickStart = performance.now();
       sim.tick(segments as any, DS, nodes);
 
       for (let i = 0; i < yarnData.length; i++) {
@@ -72,6 +78,7 @@ export function simulate(
       }
 
       renderer.updateYarnGeometry(yarnData);
+      lastTickMs = performance.now() - tickStart;
     }
     renderer.draw();
   }
@@ -90,5 +97,12 @@ export function simulate(
     return sim !== undefined && sim.running();
   }
 
-  return { relax, stopSim, draw, isRelaxing };
+  return {
+    relax,
+    stopSim,
+    draw,
+    isRelaxing,
+    topologyMs,
+    getTickMs: () => lastTickMs,
+  };
 }

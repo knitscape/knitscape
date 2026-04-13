@@ -302,6 +302,20 @@ button.run-btn:hover {
   height: 100%;
 }
 
+.sim-stats {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: var(--base8);
+  pointer-events: none;
+  z-index: 10;
+}
+
 .relax-btn {
   position: absolute;
   bottom: 1rem;

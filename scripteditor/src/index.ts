@@ -18,6 +18,8 @@ let state: AppState = {
   statusClass: "",
   activeExample: 0,
   simState: "idle",
+  topologyMs: 0,
+  tickMs: 0,
 };
 
 // Last successful script result — kept so we can re-render on zoom/mode changes
@@ -28,6 +30,7 @@ let simDraw: (() => void) | undefined;
 let simStop: (() => void) | undefined;
 let simRelax: (() => void) | undefined;
 let simIsRelaxing: (() => boolean) | undefined;
+let simGetTickMs: (() => number) | undefined;
 
 let needsRender = true;
 
@@ -72,6 +75,7 @@ function initSimulation(resetCamera = true) {
     simDraw = undefined;
     simRelax = undefined;
     simIsRelaxing = undefined;
+    simGetTickMs = undefined;
   }
 
   const simCanvas = document.getElementById(
@@ -93,7 +97,8 @@ function initSimulation(resetCamera = true) {
   simStop = result.stopSim;
   simRelax = result.relax;
   simIsRelaxing = result.isRelaxing;
-  setState({ simState: "idle" });
+  simGetTickMs = result.getTickMs;
+  setState({ simState: "idle", topologyMs: result.topologyMs, tickMs: 0 });
 }
 
 function relaxSimulation() {
@@ -166,9 +171,14 @@ function loop() {
 
   if (simDraw) simDraw();
 
-  // Detect when relaxation finishes
-  if (state.simState === "relaxing" && simIsRelaxing && !simIsRelaxing()) {
-    setState({ simState: "relaxed" });
+  // Update tick timing and detect when relaxation finishes
+  if (state.simState === "relaxing") {
+    if (simGetTickMs) {
+      setState({ tickMs: simGetTickMs() });
+    }
+    if (simIsRelaxing && !simIsRelaxing()) {
+      setState({ simState: "relaxed" });
+    }
   }
 
   requestAnimationFrame(loop);

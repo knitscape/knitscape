@@ -10,6 +10,8 @@ export interface AppState {
   statusClass: string;
   activeExample: number; // index into EXAMPLES, -1 = none
   simState: SimState;
+  topologyMs: number;
+  tickMs: number;
 }
 
 export interface ViewHandlers {
@@ -74,6 +76,12 @@ export function view(state: AppState, handlers: ViewHandlers) {
 
         <div id="preview-pane">
           <canvas id="sim-canvas"></canvas>
+          <div class="sim-stats">
+            <span>topology: ${state.topologyMs.toFixed(1)}ms</span>
+            ${state.simState !== "idle"
+              ? html`<span>tick: ${state.tickMs.toFixed(1)}ms</span>`
+              : ""}
+          </div>
           ${state.simState === "idle"
             ? html`<button
                 class="relax-btn"
