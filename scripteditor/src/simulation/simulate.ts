@@ -4,17 +4,7 @@ import { segmentsToPoints } from "./shared";
 import { generateTopology, computeYarnPathSpline, layoutNodes } from "./shared";
 import type { StitchPatternType } from "./topology";
 
-import { topDownRenderer } from "./renderers/topdown";
 import { noodleRenderer } from "./renderers/noodle";
-import { centerlineRenderer } from "./renderers/centerline";
-import { threeTubeRenderer } from "./renderers/threeTube";
-
-export const visualizations = {
-  noodle: noodleRenderer,
-  topdown: topDownRenderer,
-  centerline: centerlineRenderer,
-  tube: threeTubeRenderer,
-};
 
 let renderer = noodleRenderer;
 
