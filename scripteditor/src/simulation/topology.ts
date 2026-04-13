@@ -383,8 +383,8 @@ export function followTheYarn(DS: DSType, rowDirections: string[]): [number, num
   const yarnPath: [number, number, number][] = [];
 
   while (j < DS.height) {
-    if (addToList(i, j, legNode, yarnPath, DS, rowDirections)) {
-      const CNL = acnsAt(i, j, DS); // Find the ACNs at this location
+    const CNL = addToList(i, j, legNode, yarnPath, DS, rowDirections);
+    if (CNL) {
       DS.setCNL(i, j, CNL);
 
       let cnLoc: [number, number];
@@ -423,22 +423,17 @@ export function followTheYarn(DS: DSType, rowDirections: string[]): [number, num
   return yarnPath;
 }
 
-function addToList(i: number, j: number, legNode: boolean, yarnPath: [number, number, number][], DS: DSType, rowDirections: string[]): boolean {
-  // determines whether to add a contact node to the yarn path
+function addToList(i: number, j: number, legNode: boolean, yarnPath: [number, number, number][], DS: DSType, rowDirections: string[]): number[][] | null {
+  // determines whether to add a contact node to the yarn path; returns ACN list or null
   if (legNode) {
-    // if it is a leg node, calculate the number of ACNs at that location
-
-    if (acnsAt(i, j, DS).length > 0) {
-      // if there is an anchored CN there, return true
-      return true;
-    }
-    return false;
+    const acns = acnsAt(i, j, DS);
+    return acns.length > 0 ? acns : null;
   } else {
     // head node
     let AV = DS.AV(i, j);
 
     if (AV == cnStates.ECN) {
-      return false;
+      return null;
     } else if (AV == cnStates.UACN) {
       let m: number | undefined, n: number | undefined;
 
@@ -506,13 +501,13 @@ function addToList(i: number, j: number, legNode: boolean, yarnPath: [number, nu
           DS.setAV(i, j, cnStates.ACN);
         }
 
-        return true;
+        return acnsAt(i, j, DS);
       } else {
-        return false;
+        return null;
       }
     } else {
       // it is an ACN or PCN
-      return true;
+      return acnsAt(i, j, DS);
     }
   }
 }
@@ -521,23 +516,41 @@ function addToList(i: number, j: number, legNode: boolean, yarnPath: [number, nu
 let finalLocationCache: Int32Array | null = null;
 let finalLocationCacheWidth = 0;
 
+// Reverse lookup: for each destination (fi, fj), the list of source (i, j) pairs that map there.
+let reverseLocationMap: Map<number, number[][]> | null = null;
+
 export function buildFinalLocationCache(DS: DSType): void {
   finalLocationCacheWidth = DS.width;
   finalLocationCache = new Int32Array(DS.width * DS.height * 2);
+  reverseLocationMap = new Map();
+
   for (let j = 0; j < DS.height; j++) {
     for (let i = 0; i < DS.width; i++) {
       const [fi, fj] = computeFinalLocation(i, j, DS);
       const idx = (j * DS.width + i) * 2;
       finalLocationCache[idx] = fi;
       finalLocationCache[idx + 1] = fj;
+
+      const key = fj * DS.width + fi;
+      let list = reverseLocationMap.get(key);
+      if (!list) {
+        list = [];
+        reverseLocationMap.set(key, list);
+      }
+      list.push([i, j]);
     }
   }
 }
 
+// Reusable output buffer to avoid allocating tuples in hot paths
+const _flOut: [number, number] = [0, 0];
+
 function finalLocation(i: number, j: number, DS: DSType): [number, number] {
   if (finalLocationCache) {
     const idx = (j * finalLocationCacheWidth + i) * 2;
-    return [finalLocationCache[idx], finalLocationCache[idx + 1]];
+    _flOut[0] = finalLocationCache[idx];
+    _flOut[1] = finalLocationCache[idx + 1];
+    return _flOut;
   }
   return computeFinalLocation(i, j, DS);
 }
@@ -579,29 +592,31 @@ function finalLocationRecursive(i: number, j: number, DS: DSType): [number, numb
   }
 }
 
-function acnsAt(i: number, j: number, DS: DSType): number[][] {
-  // determines which ACNs are positioned at location (i,j) in the CN grid
-
+function cnsAtLocation(i: number, j: number, DS: DSType): number[][] {
   if (i >= DS.width || j >= DS.height) return [];
 
-  const maxHorizontal = 6; // 3 needles * 2 CNs/needle
-  const maxVertical = 10; // vertical shift
+  if (reverseLocationMap) {
+    return reverseLocationMap.get(j * DS.width + i) || [];
+  }
 
-  let iMin = i - maxHorizontal < 0 ? 0 : i - maxHorizontal;
-  let iMax = i + maxHorizontal >= DS.width ? DS.width - 1 : i + maxHorizontal;
-  let jMin = j - maxVertical < 0 ? 0 : j - maxVertical;
-  let jMax = j;
-
-  const ACNList = [];
-  for (let jj = jMin; jj <= jMax; jj++) {
+  // Fallback: brute-force scan (only used if cache not built)
+  const cnList = [];
+  const iMin = Math.max(0, i - MAX_H_SHIFT);
+  const iMax = Math.min(DS.width - 1, i + MAX_H_SHIFT);
+  const jMin = Math.max(0, j - MAX_V_SHIFT);
+  for (let jj = jMin; jj <= j; jj++) {
     for (let ii = iMin; ii <= iMax; ii++) {
       let [iFinal, jFinal] = finalLocation(ii, jj, DS);
-      if (iFinal == i && jFinal == j && DS.AV(ii, jj) == cnStates.ACN) {
-        ACNList.push([ii, jj]);
+      if (iFinal == i && jFinal == j) {
+        cnList.push([ii, jj]);
       }
     }
   }
-  return ACNList;
+  return cnList;
+}
+
+function acnsAt(i: number, j: number, DS: DSType): number[][] {
+  return cnsAtLocation(i, j, DS).filter(([si, sj]) => DS.AV(si, sj) == cnStates.ACN);
 }
 
 function nextCN(i: number, j: number, legNode: boolean, currentStitchRow: number, DS: DSType, rowDirections: string[]): { i: number; j: number; legNode: boolean; currentStitchRow: number } {
@@ -751,26 +766,6 @@ function determineRule(rowJ: number, pattern: StitchPatternType): number[] {
   return rule;
 }
 
-function cnsAt(i: number, j: number, DS: DSType): number[][] {
-  // determines which CNS are positioned at location (i,j) in the CN grid
-  if (i >= DS.width || j >= DS.height) return [];
-
-  let iMin = i - MAX_H_SHIFT < 0 ? 0 : i - MAX_H_SHIFT;
-  let iMax = i + MAX_H_SHIFT >= DS.width ? DS.width - 1 : i + MAX_H_SHIFT;
-  let jMin = j - MAX_V_SHIFT < 0 ? 0 : j - MAX_V_SHIFT;
-  let jMax = j;
-
-  const cnList = [];
-  for (let jj = jMin; jj <= jMax; jj++) {
-    for (let ii = iMin; ii <= iMax; ii++) {
-      let [iFinal, jFinal] = finalLocation(ii, jj, DS);
-      if (iFinal == i && jFinal == j) {
-        cnList.push([ii, jj]);
-      }
-    }
-  }
-  return cnList;
-}
 
 export function orderCNs(DS: DSType, pattern: StitchPatternType): void {
   for (let jj = 0; jj < DS.height; jj++) {
@@ -782,7 +777,7 @@ export function orderCNs(DS: DSType, pattern: StitchPatternType): void {
 
 export function cnOrderAt(i: number, j: number, pattern: StitchPatternType, DS: DSType): number[][] {
   let orderedCNs: number[][] = [];
-  let CNList = cnsAt(i, j, DS);
+  let CNList = cnsAtLocation(i, j, DS);
   if (CNList.length == 0) {
     // console.debug(`No CNs at location ${i}, ${j}`);
     return orderedCNs;
