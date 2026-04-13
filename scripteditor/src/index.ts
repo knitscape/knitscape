@@ -14,11 +14,11 @@ const MAX_CELL = 80;
 
 let state: AppState = {
   code: EXAMPLES[0].code,
-  previewView: "chart",
   cellSize: 20,
   statusText: "Press Run or Ctrl+Enter to generate the chart.",
   statusClass: "",
   activeExample: 0,
+  simState: "idle",
 };
 
 // Last successful script result — kept so we can re-render on zoom/mode changes
@@ -27,6 +27,8 @@ let lastResult: ScriptResult | null = null;
 // Simulation handles
 let simDraw: (() => void) | undefined;
 let simStop: (() => void) | undefined;
+let simRelax: (() => void) | undefined;
+let simIsRelaxing: (() => boolean) | undefined;
 
 let needsRender = true;
 
@@ -62,13 +64,15 @@ function renderChart() {
 
 // ─── Simulation ───────────────────────────────────────────────────────────────
 
-function startSimulation() {
+function initSimulation(resetCamera = true) {
   if (!lastResult) return;
 
   if (simStop) {
     simStop();
     simStop = undefined;
     simDraw = undefined;
+    simRelax = undefined;
+    simIsRelaxing = undefined;
   }
 
   const simCanvas = document.getElementById(
@@ -77,12 +81,10 @@ function startSimulation() {
   if (!simCanvas) return;
 
   const { stitches: stitchBimp, yarns: yarnBimp, palette } = lastResult;
-  // Run yarn separation: splits multi-yarn rows into one carriage pass per yarn,
-  // producing the machineChart the simulation expects.
   const { machineChart, yarnSequence, rowMap } = yarnSeparation(
     stitchBimp,
     yarnBimp,
-    false // no tuck joins at yarn transitions
+    false
   );
   const pattern = new Pattern(machineChart, yarnSequence, rowMap);
 
@@ -90,18 +92,20 @@ function startSimulation() {
     canvas: simCanvas,
     yarnPalette: palette,
     cellAspect: 1,
+    resetCamera,
   });
 
   simDraw = result.draw;
   simStop = result.stopSim;
-  result.relax();
+  simRelax = result.relax;
+  simIsRelaxing = result.isRelaxing;
+  setState({ simState: "idle" });
 }
 
-function stopSimulation() {
-  if (simStop) {
-    simStop();
-    simStop = undefined;
-    simDraw = undefined;
+function relaxSimulation() {
+  if (simRelax) {
+    simRelax();
+    setState({ simState: "relaxing" });
   }
 }
 
@@ -120,12 +124,7 @@ function runWithCode(code: string) {
     });
 
     renderChart();
-
-    if (state.previewView === "sim") {
-      startSimulation();
-    } else {
-      stopSimulation();
-    }
+    initSimulation();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     setState({ statusText: `Error: ${msg}`, statusClass: "error" });
@@ -150,18 +149,6 @@ function selectExample(i: number) {
 // ─── Render loop ─────────────────────────────────────────────────────────────
 
 const handlers: ViewHandlers = {
-  onRun: runCurrentScript,
-
-  onViewChange: (v) => {
-    setState({ previewView: v });
-    if (v === "sim") {
-      requestAnimationFrame(() => startSimulation());
-    } else {
-      stopSimulation();
-      requestAnimationFrame(() => renderChart());
-    }
-  },
-
   onZoomIn: () => {
     setState({ cellSize: Math.min(state.cellSize + 4, MAX_CELL) });
     renderChart();
@@ -173,6 +160,8 @@ const handlers: ViewHandlers = {
   },
 
   onSelectExample: selectExample,
+  onRelax: relaxSimulation,
+  onReset: () => initSimulation(false),
 };
 
 function loop() {
@@ -181,7 +170,12 @@ function loop() {
     render(view(state, handlers), document.body);
   }
 
-  if (simDraw && state.previewView === "sim") simDraw();
+  if (simDraw) simDraw();
+
+  // Detect when relaxation finishes
+  if (state.simState === "relaxing" && simIsRelaxing && !simIsRelaxing()) {
+    setState({ simState: "relaxed" });
+  }
 
   requestAnimationFrame(loop);
 }
@@ -196,6 +190,13 @@ function init() {
       sizes: [50, 50],
       minSize: 200,
       gutterSize: 6,
+    });
+
+    Split(["#code-pane", "#chart-pane"], {
+      sizes: [50, 50],
+      minSize: 80,
+      gutterSize: 6,
+      direction: "vertical",
     });
 
     // Ctrl/Cmd+Enter to run
@@ -225,9 +226,9 @@ function init() {
       });
     }
 
-    // Ctrl+scroll to zoom on the preview pane
-    const previewPane = document.getElementById("preview-pane");
-    previewPane?.addEventListener(
+    // Ctrl+scroll to zoom on the chart pane
+    const chartPane = document.getElementById("chart-pane");
+    chartPane?.addEventListener(
       "wheel",
       (e) => {
         if (e.ctrlKey || e.metaKey) {

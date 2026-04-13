@@ -28,8 +28,8 @@
 
 @font-face {
   font-family: "National Park";
-  src: url("/assets/fonts/NP-VariableVF.woff2")
-      format("woff2 supports variations"),
+  src:
+    url("/assets/fonts/NP-VariableVF.woff2") format("woff2 supports variations"),
     url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
 }
 
@@ -56,37 +56,6 @@ canvas {
   display: block;
 }
 
-/* ─── Toolbar ────────────────────────────────────────────────────────────── */
-
-#toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
-  background: var(--base1);
-  border-bottom: 1px solid var(--base3);
-  flex-shrink: 0;
-}
-
-#toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-#toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.toolbar-sep {
-  width: 1px;
-  height: 1.25rem;
-  background: var(--base4);
-  flex-shrink: 0;
-}
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
 
@@ -233,6 +202,39 @@ button.run-btn:hover {
   min-width: 0;
 }
 
+#code-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#chart-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  background: var(--base1);
+  border-top: 1px solid var(--base3);
+  position: relative;
+}
+
+.chart-zoom-controls {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 2px;
+  z-index: 10;
+}
+
+.chart-zoom-controls button {
+  background: var(--base2);
+  border: 1px solid var(--base4);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+}
+
 #preview-pane {
   display: flex;
   flex-direction: column;
@@ -270,17 +272,17 @@ button.run-btn:hover {
 #chart-canvas-wrap {
   flex: 1;
   overflow: auto;
-  padding: 1rem;
+  padding: 0.75rem;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .chart-section {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .chart-label {
@@ -291,15 +293,8 @@ button.run-btn:hover {
   color: var(--base7);
 }
 
-#chart-canvas-wrap.hidden,
-#sim-canvas-wrap.hidden {
-  display: none;
-}
-
-#sim-canvas-wrap {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
+#preview-pane {
+  position: relative;
 }
 
 #sim-canvas {
@@ -307,12 +302,42 @@ button.run-btn:hover {
   height: 100%;
 }
 
+.relax-btn {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-variation-settings: "wght" 600;
+  padding: 0.4rem 1.2rem;
+  font-size: 0.85rem;
+  z-index: 10;
+}
+
+.relax-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.relax-btn.disabled {
+  background: var(--base4);
+  color: var(--base7);
+  cursor: default;
+}
+
 /* ─── Split gutter ───────────────────────────────────────────────────────── */
 
 .gutter {
   background: var(--base3);
-  cursor: col-resize;
   flex-shrink: 0;
+}
+
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+}
+
+.gutter.gutter-vertical {
+  cursor: row-resize;
 }
 
 .gutter:hover {

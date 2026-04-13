@@ -7,22 +7,23 @@ export interface Example {
 export const EXAMPLES: Example[] = [
   // ─────────────────────────────────────────────────────────────────────────
   {
-    name: "Checkerboard",
-    description: "Alternating KNIT/PURL with two colors",
-    code: `const w = 20, h = 20;
+    name: "Striped Rib",
+    description: "1×1 rib with two-color horizontal stripes",
+    code: `const w = 10, h = 12;
 const s = [], y = [];
 
 for (let row = 0; row < h; row++) {
+  const color = Math.floor(row / 2) % 2 + 1; // stripe every 2 rows
   for (let col = 0; col < w; col++) {
-    s.push((col + row) % 2 === 0 ? STITCHES.KNIT : STITCHES.PURL);
-    y.push((col + row) % 2 === 0 ? 1 : 2);
+    s.push(col % 2 === 0 ? STITCHES.KNIT : STITCHES.PURL);
+    y.push(color);
   }
 }
 
 return {
   stitches: new Bimp(w, h, new Uint8ClampedArray(s)),
   yarns:    new Bimp(w, h, new Uint8ClampedArray(y)),
-  palette:  ["#08ccab", "#eb4034"],
+  palette:  ["#a8dadc", "#e63946"],
 };`,
   },
 

@@ -16,6 +16,7 @@ export interface SimulateOptions {
   canvas: HTMLCanvasElement;
   yarnPalette: string[];
   cellAspect: number;
+  resetCamera?: boolean;
 }
 
 export function simulate(
@@ -58,7 +59,7 @@ export function simulate(
     };
   });
 
-  renderer.init(yarnData, canvas);
+  renderer.init(yarnData, canvas, options.resetCamera ?? true);
 
   function draw() {
     if (sim && sim.running()) {
@@ -86,5 +87,9 @@ export function simulate(
     if (sim) sim.stop();
   }
 
-  return { relax, stopSim, draw };
+  function isRelaxing() {
+    return sim !== undefined && sim.running();
+  }
+
+  return { relax, stopSim, draw, isRelaxing };
 }

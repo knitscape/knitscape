@@ -377,7 +377,7 @@ function computeLightMatrices(bbox: any) {
   );
 }
 
-function init(yarnData: any, canvas: HTMLCanvasElement) {
+function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
   if (!gl || gl.canvas !== canvas) {
     gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
     if (!gl) {
@@ -407,7 +407,7 @@ function init(yarnData: any, canvas: HTMLCanvasElement) {
   }
 
   const bbox = bbox3d(yarnData[0].pts);
-  camera.fit(bbox);
+  if (resetCamera) camera.fit(bbox);
   computeLightMatrices(bbox);
 
   yarns = [];
