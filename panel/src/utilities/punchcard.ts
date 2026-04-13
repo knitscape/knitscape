@@ -1,6 +1,6 @@
 import { html, svg } from "lit-html";
 import { GLOBAL_STATE } from "../state";
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 
 // Extended global state with punchcard-specific properties
 const gc = GLOBAL_STATE as any;

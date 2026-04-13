@@ -1,4 +1,4 @@
-import type { Bimp, Vec2 } from "../../../shared/Bimp";
+import type { Bimp, Vec2 } from "@shared/Bimp";
 
 interface Pos {
   x: number;

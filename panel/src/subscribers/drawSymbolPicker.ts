@@ -1,4 +1,4 @@
-import { SYMBOL_DATA } from "../constants";
+import { SYMBOL_DATA } from "@shared/chartSymbols";
 import type { GlobalState, StateObserver } from "../types";
 
 export function drawSymbolPicker() {

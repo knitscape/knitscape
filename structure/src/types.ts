@@ -1,4 +1,4 @@
-import type { Bimp, BimpJSON } from "../../shared/Bimp";
+import type { Bimp, BimpJSON } from "@shared/Bimp";
 
 export type Vec2 = [number, number];
 

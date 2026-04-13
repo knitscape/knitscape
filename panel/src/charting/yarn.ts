@@ -1,7 +1,7 @@
 import { GLOBAL_STATE, dispatch } from "../state";
 import { getRandomColor } from "../utilities/misc";
 import jscolor from "@eastdesire/jscolor";
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 
 export function deleteYarn(index: number) {
   const { yarnPalette, yarnChart } = GLOBAL_STATE;

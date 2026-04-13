@@ -1,6 +1,6 @@
-import type { Bimp, BimpJSON } from "../../shared/Bimp";
+import type { Bimp, BimpJSON } from "@shared/Bimp";
+import type { ColorMode } from "@shared/chartSymbols";
 
-export type { BimpJSON };
 
 export type Vec2 = [number, number];
 
@@ -39,18 +39,8 @@ export interface Block {
   stitchBlock: Bimp;
 }
 
-export type ColorMode = "yarn" | "operation";
 export type InteractionMode = "boundary" | "path" | "block";
 export type BlockEditMode = "yarn" | "stitch" | null;
-
-export interface SymbolData {
-  pathdata?: string;
-  path?: Path2D;
-  color: string;
-  stroke?: string;
-  yarnModeColor?: string;
-  description?: string;
-}
 
 export interface GlobalState {
   exampleLibrary: Record<string, () => Promise<unknown>>;

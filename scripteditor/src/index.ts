@@ -1,11 +1,11 @@
 import { render } from "lit-html";
 import Split from "split.js";
 
-import { drawChart } from "../../panel/src/charting/drawing";
+import { drawChart } from "./drawChart";
 import { simulate } from "../../panel/src/simulation/topDownYarnSimulation";
-import { Pattern } from "../../panel/src/simulation/Pattern";
+import { Pattern } from "./Pattern";
 import { runScript, type ScriptResult } from "./execute";
-import { yarnSeparation } from "../../panel/src/charting/yarnSeparation";
+import { yarnSeparation } from "./yarnSeparation";
 import { view, type AppState, type ViewHandlers } from "./view";
 import { EXAMPLES } from "./examples";
 

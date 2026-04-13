@@ -2,7 +2,7 @@ import { drawStitchBlock, drawYarnBlock } from "../charting/drawing";
 import { setCanvasSize } from "../utilities/misc";
 import { bBoxAllBoundaries } from "../charting/helpers";
 import type { GlobalState, StateObserver, Block } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 interface LastDrawnEntry {
   bitmap: Bimp | null;

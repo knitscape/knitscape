@@ -1,4 +1,4 @@
-import { stitches } from "../constants";
+import { stitches } from "@shared/stitches";
 import { Vec2 } from "./utils/Vec2";
 import type { DSType } from "./topology";
 

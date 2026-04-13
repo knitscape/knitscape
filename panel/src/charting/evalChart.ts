@@ -1,5 +1,5 @@
-import { Bimp } from "../../../shared/Bimp";
-import { stitches } from "../constants";
+import { Bimp } from "@shared/Bimp";
+import { stitches } from "@shared/stitches";
 import { knitScanline } from "./knitScanline";
 import { pathTiling } from "./pathTiling";
 import { bBoxAllBoundaries } from "./helpers";

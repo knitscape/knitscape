@@ -1,6 +1,6 @@
 import { drawChart } from "../charting/drawing";
 import type { GlobalState, StateObserver } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 export function chartSubscriber() {
   return ({ state }: { state: GlobalState }): StateObserver => {

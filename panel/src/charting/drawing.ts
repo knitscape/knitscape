@@ -1,6 +1,7 @@
-import { SYMBOL_DATA, STITCH_MAP, BACK_OPS } from "../constants";
-import type { Bimp } from "../../../shared/Bimp";
-import type { ColorMode } from "../types";
+import { SYMBOL_DATA, BACK_OPS } from "@shared/chartSymbols";
+import { STITCH_MAP } from "@shared/stitches";
+import type { Bimp } from "@shared/Bimp";
+import type { ColorMode } from "@shared/chartSymbols";
 
 const TRANSPARENT = "#dfdfdf7f";
 const DIM = "#0000002a";

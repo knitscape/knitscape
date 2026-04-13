@@ -1,7 +1,7 @@
 import { GLOBAL_STATE } from "../state";
 import { bmp_lib } from "../lib/bmp";
 import { hexToRgb } from "../utilities/misc";
-import { SYMBOL_DATA } from "../constants";
+import { SYMBOL_DATA } from "@shared/chartSymbols";
 import type { GlobalState, StateObserver } from "../types";
 
 function renderTimeNeedle(passSchedule: number[][]) {

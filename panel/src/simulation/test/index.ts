@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { html, render } from "lit-html";
 import Split from "split.js";
-import { Bimp } from "../../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 
 import { drawGraph } from "./topologyGraph";
-import { stitches } from "../../constants";
+import { stitches } from "@shared/stitches";
 
 const stitchList = Object.entries(stitches).map(
   ([stitchName, stitchID]) => stitchName

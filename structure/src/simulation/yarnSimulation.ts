@@ -4,7 +4,7 @@ import { YarnModel } from "./YarnModel";
 import type { ContactNode, YarnPathNode, YarnPathLink } from "./YarnModel";
 import { yarnLinkForce } from "./YarnForce";
 import * as d3 from "d3";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 const X_PADDING = 1;
 const Y_PADDING = 0;

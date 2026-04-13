@@ -2,7 +2,7 @@ import { drawStitchBlock, drawYarnBlock } from "../charting/drawing";
 import { setCanvasSize } from "../utilities/misc";
 import { bBoxAllBoundaries } from "../charting/helpers";
 import type { GlobalState, StateObserver } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 export function blockFillSubscriber() {
   return ({ state }: { state: GlobalState }): StateObserver => {

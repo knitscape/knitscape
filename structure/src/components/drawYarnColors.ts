@@ -1,5 +1,5 @@
 import type { GlobalState, ComponentFactory } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 export function drawYarnColors(
   yarnColorCanvas: HTMLCanvasElement

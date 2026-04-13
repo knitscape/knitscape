@@ -2,7 +2,7 @@ import { html } from "lit-html";
 import { GLOBAL_STATE, dispatch } from "../state";
 import { getRandomColor, shuffle } from "../utils";
 import jscolor from "@eastdesire/jscolor";
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 
 function symbolPicker() {
   return html` <div id="symbol-picker">

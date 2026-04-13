@@ -1,9 +1,9 @@
 import { bmp_lib } from "../lib/bmp";
 import { hexToRgb } from "./misc";
-import { SYMBOL_DATA } from "../constants";
+import { SYMBOL_DATA } from "@shared/chartSymbols";
 import { scheduleChart } from "../charting/planner";
 import type { Region, KnitPath, Block } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 function downloadFile(dataStr: string, fileName: string) {
   const downloadAnchorNode = document.createElement("a");

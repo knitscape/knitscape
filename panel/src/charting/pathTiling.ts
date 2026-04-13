@@ -1,5 +1,5 @@
-import { stitches } from "../constants";
-import type { Bimp, Vec2 } from "../../../shared/Bimp";
+import { stitches } from "@shared/stitches";
+import type { Bimp, Vec2 } from "@shared/Bimp";
 import type { KnitPath } from "../types";
 
 function plotLine(

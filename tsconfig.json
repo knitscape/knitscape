@@ -11,8 +11,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    }
   },
-  "include": ["structure/src/**/*.ts", "panel/src/**/*.ts", "shared/**/*.ts"],
+  "include": ["structure/src/**/*.ts", "panel/src/**/*.ts", "scripteditor/src/**/*.ts", "shared/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

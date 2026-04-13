@@ -1,4 +1,5 @@
-import { stitches, cnStates, MAX_H_SHIFT, MAX_V_SHIFT } from "../constants";
+import { stitches } from "@shared/stitches";
+import { cnStates, MAX_H_SHIFT, MAX_V_SHIFT } from "../constants";
 
 export type GridCell = [number | null, number, [number | null, number | null], number[][], number[], number[][]];
 

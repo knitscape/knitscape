@@ -1,4 +1,4 @@
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 import { GLOBAL_STATE, dispatch } from "../state";
 import { rasterizeChart } from "../charting/evalChart";
 import { bBoxAllBoundaries } from "../charting/helpers";

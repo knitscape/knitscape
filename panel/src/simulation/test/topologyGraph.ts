@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Pattern } from "../Pattern";
-import { cnStates, stitches } from "../../constants";
+import { stitches } from "@shared/stitches";
+import { cnStates } from "../../constants";
 
 import { populateDS, followTheYarn, cnOrderAt, orderCNs } from "../topology";
 import { layoutNodes, buildSegmentData } from "../yarn3d";

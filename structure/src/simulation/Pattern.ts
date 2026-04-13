@@ -1,4 +1,4 @@
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 const opTypes: Record<string, number> = {
   T: 0,

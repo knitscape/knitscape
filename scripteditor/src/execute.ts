@@ -1,5 +1,5 @@
-import { Bimp } from "../../shared/Bimp";
-import { stitches } from "../../panel/src/constants";
+import { Bimp } from "@shared/Bimp";
+import { stitches } from "@shared/stitches";
 
 export interface ScriptResult {
   stitches: Bimp;

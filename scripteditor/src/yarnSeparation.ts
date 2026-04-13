@@ -1,12 +1,11 @@
 import { stitches } from "@shared/stitches";
 import { Bimp } from "@shared/Bimp";
-import { GLOBAL_STATE } from "../state";
 
 function processRow(
   yarnRow: number[],
   stitchRow: number[],
   direction: string,
-  tucks?: boolean
+  tucks: boolean
 ): { passes: number[][]; sequence: number[] } {
   let sequence: number[] = [];
 
@@ -34,7 +33,6 @@ function processRow(
     } else {
       // Otherwise add this operation to the current pass
       if (currentPassIndex < 0) {
-        //Something is wrong here, debug this
         continue;
       }
       passes[currentPassIndex][loc] = currentStitch;
@@ -46,10 +44,8 @@ function processRow(
       // If the next yarn is different...
       if (nextYarn != undefined && nextYarn != 0 && nextYarn != currentYarn) {
         const nextPassIndex = sequence.indexOf(nextYarn);
-        // Add a front at the current location to join the two pieces.
-        const useTucks =
-          tucks !== undefined ? tucks : GLOBAL_STATE.tucks;
-        if (useTucks) passes[nextPassIndex][loc] = stitches.FT;
+        // Add a front tuck at the current location to join the two pieces.
+        if (tucks) passes[nextPassIndex][loc] = stitches.FT;
       }
     }
   }
@@ -60,7 +56,7 @@ function processRow(
 export function yarnSeparation(
   stitchChart: Bimp,
   yarnChart: Bimp,
-  tucks?: boolean
+  tucks: boolean = false
 ) {
   let st = stitchChart.make2d();
   let yc = yarnChart.make2d();

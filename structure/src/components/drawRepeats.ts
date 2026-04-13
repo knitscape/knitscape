@@ -1,7 +1,7 @@
 import { GLOBAL_STATE } from "../state";
 import { SYMBOL_PATHS, SYMBOL_BITS } from "../constants";
 import type { GlobalState, ComponentFactory, SymbolName } from "../types";
-import type { Bimp } from "../../../shared/Bimp";
+import type { Bimp } from "@shared/Bimp";
 
 function clearLastDrawn(lastDrawn: { bitmap: Bimp | null }[]): void {
   for (const repeat of lastDrawn) {

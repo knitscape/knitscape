@@ -2,6 +2,11 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@shared": resolve(__dirname, "shared"),
+    },
+  },
   build: {
     rollupOptions: {
       input: {

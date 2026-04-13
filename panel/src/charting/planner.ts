@@ -1,5 +1,5 @@
-import { stitches } from "../constants";
-import type { Bimp } from "../../../shared/Bimp";
+import { stitches } from "@shared/stitches";
+import type { Bimp } from "@shared/Bimp";
 
 const FRONT = new Set([
   stitches.KNIT,

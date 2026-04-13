@@ -1,8 +1,8 @@
 import { GLOBAL_STATE, dispatch } from "../state";
-import { stitches } from "../constants";
+import { stitches } from "@shared/stitches";
 import { editingTools } from "../charting/editingTools";
 import { pan } from "./chartPanZoom";
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 import { pointerPosInElement } from "../utilities/misc";
 import type { Vec2, KnitPath } from "../types";
 

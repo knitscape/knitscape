@@ -1,6 +1,6 @@
 import { html, svg } from "lit-html";
 import { GLOBAL_STATE } from "./state";
-import { Bimp } from "../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 
 interface MachineConfig {
   cardWidth: number;

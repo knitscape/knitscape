@@ -1,9 +1,9 @@
 import { GLOBAL_STATE, dispatch } from "../state";
-import { stitches } from "../constants";
+import { stitches } from "@shared/stitches";
 import { editingTools } from "../charting/editingTools";
 import { pan } from "./chartPanZoom";
 import { selectBox } from "./select";
-import { Bimp } from "../../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 import type { Vec2, Region } from "../types";
 
 export function boundaryModePointerDown(e: PointerEvent) {

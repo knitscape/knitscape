@@ -3,7 +3,7 @@ import type { DSType, StitchPatternType } from "./topology";
 import { Vec2 } from "./utils/Vec2";
 import { Vec3 } from "./utils/Vec3";
 
-import { stitches } from "../constants";
+import { stitches } from "@shared/stitches";
 
 export function generateTopology(stitchPattern: StitchPatternType): { DS: DSType; yarnPath: [number, number, number][] } {
   const DS = populateDS(stitchPattern);

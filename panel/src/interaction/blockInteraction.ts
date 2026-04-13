@@ -1,8 +1,8 @@
 import { GLOBAL_STATE, dispatch } from "../state";
 import { pan } from "./chartPanZoom";
 import { editingTools } from "../charting/editingTools";
-import { stitches } from "../constants";
-import { Bimp } from "../../../shared/Bimp";
+import { stitches } from "@shared/stitches";
+import { Bimp } from "@shared/Bimp";
 import type { Vec2, Block } from "../types";
 
 function blockPos(e: PointerEvent, blockIndex: number) {

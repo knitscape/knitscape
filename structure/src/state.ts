@@ -1,4 +1,4 @@
-import { Bimp } from "../../shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 import {
   SNAPSHOT_INTERVAL,
   MAX_SNAPSHOTS,

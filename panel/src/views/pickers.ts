@@ -4,9 +4,11 @@ import { when } from "lit-html/directives/when.js";
 import { classMap } from "lit-html/directives/class-map.js";
 
 import { dispatch, GLOBAL_STATE } from "../state";
-import { SYMBOL_DATA, stitches, toolData } from "../constants";
+import { toolData } from "../constants";
+import { stitches } from "@shared/stitches";
+import { SYMBOL_DATA } from "@shared/chartSymbols";
+import type { SymbolData } from "@shared/chartSymbols";
 import { editingTools } from "../charting/editingTools";
-import type { SymbolData } from "../types";
 
 const TRANSPARENT_YARN = "#585858";
 
