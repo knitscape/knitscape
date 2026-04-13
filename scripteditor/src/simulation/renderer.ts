@@ -1,6 +1,6 @@
-import { buildYarnCurve } from "./utils/yarnSpline";
-import { bbox3d, initShaderProgram, resizeCanvasToDisplaySize } from "./utils/helpers";
-import { createCamera3D } from "./utils/Camera3D";
+import { buildYarnCurve } from "./spline";
+import { bbox3d, initShaderProgram, resizeCanvasToDisplaySize } from "./webgl";
+import { createCamera3D } from "./camera";
 import { Mat4 } from "@shared/mat4";
 
 const segmentVertexShader = /* glsl */ `

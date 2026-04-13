@@ -1,10 +1,9 @@
 import { hexToRgb } from "@shared/hexToRgb";
 import { yarnRelaxation } from "./relaxation";
-import { segmentsToPoints } from "./shared";
-import { generateTopology, computeYarnPathSpline, layoutNodes } from "./shared";
-import type { StitchPatternType } from "./topology";
+import { segmentsToPoints, generateTopology, computeYarnPathSpline, layoutNodes } from "./layout";
+import type { StitchPatternType } from "./types";
 
-import { noodleRenderer } from "./renderers/noodle";
+import { noodleRenderer } from "./renderer";
 
 let renderer = noodleRenderer;
 

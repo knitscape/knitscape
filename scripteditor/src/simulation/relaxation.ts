@@ -1,17 +1,5 @@
 import { Vec3 } from "@shared/Vec3";
-import type { DSType } from "./topology";
-
-type NodeType = { pos: number[]; f: number[]; v: number[]; q0: number[]; q1: number[] };
-
-type SegmentType = {
-  source: number;
-  target: number;
-  sourceOffset: number[];
-  targetOffset: number[];
-  restLength: number;
-};
-
-type YarnSegments = Record<string, SegmentType[]>;
+import type { DSType, NodeType, ResolvedSegment } from "./types";
 
 export function yarnRelaxation(
   kYarn = 0.4,
@@ -28,7 +16,7 @@ export function yarnRelaxation(
 
   let running = true;
 
-  function applyYarnForce(nodes: NodeType[], seg: SegmentType, K_YARN: number): void {
+  function applyYarnForce(nodes: NodeType[], seg: ResolvedSegment, K_YARN: number): void {
     let cn1 = nodes[seg.source];
     let cn2 = nodes[seg.target];
 
@@ -50,7 +38,7 @@ export function yarnRelaxation(
     cn2.f = Vec3.subtract(cn2.f, force);
   }
 
-  function torsion(nodes: NodeType[], seg1: SegmentType, seg2: SegmentType, seg3: SegmentType): void {
+  function torsion(nodes: NodeType[], seg1: ResolvedSegment, seg2: ResolvedSegment, seg3: ResolvedSegment): void {
     let p0 = Vec3.add(nodes[seg1.target].pos, seg1.targetOffset);
     let p1 = Vec3.add(nodes[seg2.source].pos, seg2.sourceOffset);
     let p2 = Vec3.add(nodes[seg2.target].pos, seg2.targetOffset);
@@ -103,11 +91,11 @@ export function yarnRelaxation(
     });
   }
 
-  function tick(yarns: YarnSegments, DS: DSType, nodes: NodeType[]): void {
+  function tick(yarns: Record<string, ResolvedSegment[]>, DS: DSType, nodes: NodeType[]): void {
     for (var k = 0; k < iterations; ++k) {
       ALPHA += (ALPHA_TARGET - ALPHA) * ALPHA_DECAY;
       // Accumulate forces to nodes
-      Object.entries(yarns).forEach(([_yarnIndex, segArr]: [string, SegmentType[]]) => {
+      Object.entries(yarns).forEach(([_yarnIndex, segArr]: [string, ResolvedSegment[]]) => {
         // segment-related forces
         for (let segIndex = 0; segIndex < segArr.length; segIndex++) {
           applyYarnForce(nodes, segArr[segIndex], kYarn);

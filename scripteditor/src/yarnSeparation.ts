@@ -1,5 +1,6 @@
 import { stitches } from "@shared/stitches";
 import { Bimp } from "@shared/Bimp";
+import type { StitchPatternType } from "./simulation/types";
 
 function processRow(
   yarnRow: number[],
@@ -57,7 +58,7 @@ export function yarnSeparation(
   stitchChart: Bimp,
   yarnChart: Bimp,
   tucks: boolean = false
-) {
+): StitchPatternType {
   let st = stitchChart.make2d();
   let yc = yarnChart.make2d();
   let direction = "right";
@@ -78,11 +79,27 @@ export function yarnSeparation(
     direction = direction == "right" ? "left" : "right";
   }
 
-  const machineChart = new Bimp(
-    yarnPasses[0].length,
-    yarnPasses.length,
-    yarnPasses.flat()
+  const width = yarnPasses[0].length;
+  const height = yarnPasses.length;
+  const ops = new Uint8ClampedArray(yarnPasses.flat());
+  const yarns = Array.from(
+    yarnSequence.filter((v, i, arr) => arr.indexOf(v) === i)
+  );
+  const carriagePasses = rowMap.map((ogRow) =>
+    ogRow % 2 == 0 ? "right" : "left"
   );
 
-  return { machineChart, yarnSequence, rowMap };
+  return {
+    width,
+    height,
+    ops,
+    yarnSequence,
+    rowMap,
+    yarns,
+    carriagePasses,
+    op(x: number, y: number): number {
+      if (x > width - 1 || x < 0 || y > height - 1 || y < 0) return -1;
+      return ops[x + y * width] ?? -1;
+    },
+  };
 }

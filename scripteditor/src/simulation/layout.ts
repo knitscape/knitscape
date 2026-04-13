@@ -1,5 +1,5 @@
 import { populateDS, followTheYarn, orderCNs } from "./topology";
-import type { DSType, StitchPatternType } from "./topology";
+import type { DSType, StitchPatternType, NodeType, SegmentType, YarnSegments } from "./types";
 import { Vec2 } from "@shared/Vec2";
 import { Vec3 } from "@shared/Vec3";
 
@@ -41,19 +41,6 @@ function getYarnPositionAtNode(DS: DSType, ypIndex: number, i: number, j: number
   );
   return undefined;
 }
-
-export type NodeType = { pos: number[]; f: number[]; v: number[]; q0: number[]; q1: number[] };
-
-export type SegmentType = {
-  source: number;
-  target: number | undefined;
-  sourceOffset: number[] | undefined;
-  targetOffset: number[] | undefined;
-  restLength: number | undefined;
-  leg: [boolean, boolean | undefined];
-};
-
-export type YarnSegments = Record<number, SegmentType[]>;
 
 export function computeYarnPathSpline(
   DS: DSType,

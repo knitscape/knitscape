@@ -3,7 +3,6 @@ import Split from "split.js";
 
 import { drawChart } from "./drawChart";
 import { simulate } from "./simulation/simulate";
-import { Pattern } from "./Pattern";
 import { runScript, type ScriptResult } from "./execute";
 import { yarnSeparation } from "./yarnSeparation";
 import { view, type AppState, type ViewHandlers } from "./view";
@@ -81,12 +80,7 @@ function initSimulation(resetCamera = true) {
   if (!simCanvas) return;
 
   const { stitches: stitchBimp, yarns: yarnBimp, palette } = lastResult;
-  const { machineChart, yarnSequence, rowMap } = yarnSeparation(
-    stitchBimp,
-    yarnBimp,
-    false
-  );
-  const pattern = new Pattern(machineChart, yarnSequence, rowMap);
+  const pattern = yarnSeparation(stitchBimp, yarnBimp, false);
 
   const result = simulate(pattern, {
     canvas: simCanvas,
