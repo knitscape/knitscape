@@ -1,6 +1,6 @@
 import { GLOBAL_STATE } from "../state";
 import { bmp_lib } from "../lib/bmp";
-import { hexToRgb } from "../utilities/misc";
+import { hexToRgb } from "@shared/hexToRgb";
 import { SYMBOL_DATA } from "@shared/chartSymbols";
 import type { GlobalState, StateObserver } from "../types";
 

@@ -1,4 +1,3 @@
-import { GLOBAL_STATE } from "../state";
 import { hexToRgb } from "@shared/hexToRgb";
 import { yarnRelaxation } from "./relaxation";
 import { segmentsToPoints } from "./shared";
@@ -24,19 +23,16 @@ const STITCH_WIDTH = 1;
 const BED_OFFSET = 0.1;
 
 export interface SimulateOptions {
-  canvas?: HTMLCanvasElement;
-  yarnPalette?: string[];
-  cellAspect?: number;
+  canvas: HTMLCanvasElement;
+  yarnPalette: string[];
+  cellAspect: number;
 }
 
 export function simulate(
   stitchPattern: StitchPatternType,
-  options?: SimulateOptions
+  options: SimulateOptions
 ) {
-  const ASPECT =
-    options?.cellAspect !== undefined
-      ? options.cellAspect
-      : GLOBAL_STATE.cellAspect;
+  const ASPECT = options.cellAspect;
   const params = {
     YARN_RADIUS: YARN_DIAMETER / 2,
     STITCH_WIDTH,
@@ -44,9 +40,7 @@ export function simulate(
     BED_OFFSET,
   };
 
-  let canvas =
-    options?.canvas ??
-    (document.getElementById("sim-canvas") as HTMLCanvasElement);
+  let canvas = options.canvas;
   let relaxed = false;
   let sim: ReturnType<typeof yarnRelaxation> | undefined;
 
@@ -62,8 +56,7 @@ export function simulate(
     params
   );
 
-  const yarnPalette =
-    options?.yarnPalette ?? GLOBAL_STATE.yarnPalette ?? [];
+  const yarnPalette = options.yarnPalette;
   const yarnData = Object.entries(segments).map(([yarnIndex, segmentArr]) => {
     return {
       yarnIndex: yarnIndex,

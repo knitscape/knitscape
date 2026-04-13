@@ -1,5 +1,5 @@
 import { bmp_lib } from "../lib/bmp";
-import { hexToRgb } from "./misc";
+import { hexToRgb } from "@shared/hexToRgb";
 import { SYMBOL_DATA } from "@shared/chartSymbols";
 import { scheduleChart } from "../charting/planner";
 import type { Region, KnitPath, Block } from "../types";

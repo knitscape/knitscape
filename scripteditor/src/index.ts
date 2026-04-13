@@ -2,7 +2,7 @@ import { render } from "lit-html";
 import Split from "split.js";
 
 import { drawChart } from "./drawChart";
-import { simulate } from "../../panel/src/simulation/topDownYarnSimulation";
+import { simulate } from "./simulation/simulate";
 import { Pattern } from "./Pattern";
 import { runScript, type ScriptResult } from "./execute";
 import { yarnSeparation } from "./yarnSeparation";

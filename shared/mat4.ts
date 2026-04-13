@@ -1,4 +1,4 @@
-import { Vec3 } from "../../utils/Vec3";
+import { Vec3 } from "./Vec3";
 
 export const Mat4 = {
   translate(m: number[], tx: number, ty: number, tz: number): number[] {
