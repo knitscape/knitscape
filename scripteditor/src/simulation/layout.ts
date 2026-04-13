@@ -1,4 +1,4 @@
-import { populateDS, followTheYarn, orderCNs } from "./topology";
+import { populateDS, followTheYarn, orderCNs, buildFinalLocationCache } from "./topology";
 import type { DSType, StitchPatternType, NodeType, SegmentType, YarnSegments } from "./types";
 import { Vec2 } from "@shared/Vec2";
 import { Vec3 } from "@shared/Vec3";
@@ -7,6 +7,8 @@ import { stitches } from "@shared/stitches";
 
 export function generateTopology(stitchPattern: StitchPatternType): { DS: DSType; yarnPath: [number, number, number][] } {
   const DS = populateDS(stitchPattern);
+
+  buildFinalLocationCache(DS);
 
   orderCNs(DS, stitchPattern);
 
@@ -203,7 +205,7 @@ export function layoutNodes(
     const i = index % DS.width;
     const j = (index - i) / DS.width;
 
-    const chartRow = j < rowMap.length ? rowMap[j] : rowMap[j - 1] + 1;
+    const chartRow = j < rowMap.length ? rowMap[j] : (rowMap.length > 0 ? rowMap[rowMap.length - 1] + 1 : 0);
     let z = 0;
     if (node[0] == stitches.KNIT) {
       z = BED_OFFSET;

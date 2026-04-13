@@ -34,17 +34,17 @@ function heldCNS(i: number, j: number, DS: DSType): number[][] {
       (AV == cnStates.ECN && MV[0] == 0 && MV[1] == -1) || // looking at a miss stitch
       (AV == cnStates.PCN && transferredCNsList.length > 0) // there is a PCN here
     ) {
-      heldCNsList = heldCNsList.concat(transferredCNsList);
+      heldCNsList.push(...transferredCNsList);
 
       let dj = j - jj;
       if (MV[0] == null && MV[1] == null) {
         DS.setMV(i, jj, [0, dj]);
       } else {
-        DS.CN(i, jj)[2][1] = dj;
+        DS.setMV(i, jj, [MV[0], dj]);
       }
     } else if (AV == cnStates.UACN && transferredCNsList.length > 0) {
       // We don't adjust the dj of a UACN - is this right?
-      heldCNsList = heldCNsList.concat(transferredCNsList);
+      heldCNsList.push(...transferredCNsList);
     } else {
       return heldCNsList;
     }
@@ -517,7 +517,32 @@ function addToList(i: number, j: number, legNode: boolean, yarnPath: [number, nu
   }
 }
 
+// Cache of final locations, built once after populateDS. Flat array: [i0,j0, i1,j1, ...]
+let finalLocationCache: Int32Array | null = null;
+let finalLocationCacheWidth = 0;
+
+export function buildFinalLocationCache(DS: DSType): void {
+  finalLocationCacheWidth = DS.width;
+  finalLocationCache = new Int32Array(DS.width * DS.height * 2);
+  for (let j = 0; j < DS.height; j++) {
+    for (let i = 0; i < DS.width; i++) {
+      const [fi, fj] = computeFinalLocation(i, j, DS);
+      const idx = (j * DS.width + i) * 2;
+      finalLocationCache[idx] = fi;
+      finalLocationCache[idx + 1] = fj;
+    }
+  }
+}
+
 function finalLocation(i: number, j: number, DS: DSType): [number, number] {
+  if (finalLocationCache) {
+    const idx = (j * finalLocationCacheWidth + i) * 2;
+    return [finalLocationCache[idx], finalLocationCache[idx + 1]];
+  }
+  return computeFinalLocation(i, j, DS);
+}
+
+function computeFinalLocation(i: number, j: number, DS: DSType): [number, number] {
   // determines where ACNs in the CN[i,j] grid end up in the yarn[i,j] grid
   const [di, dj] = DS.MV(i, j);
 
@@ -534,8 +559,8 @@ function finalLocation(i: number, j: number, DS: DSType): [number, number] {
 
 function finalLocationRecursive(i: number, j: number, DS: DSType): [number, number] {
   if (i < 0 || i >= DS.width || j < 0 || j >= DS.height) {
-    console.warn(`Trying to move outside chart bounds`);
-    console.log(i, j);
+    console.warn(`Trying to move outside chart bounds: ${i}, ${j}`);
+    return [Math.max(0, Math.min(i, DS.width - 1)), Math.max(0, Math.min(j, DS.height - 1))];
   }
 
   const cn = DS.CN(i, j);
@@ -654,6 +679,8 @@ function nextCN(i: number, j: number, legNode: boolean, currentStitchRow: number
 }
 
 function determineRule(rowJ: number, pattern: StitchPatternType): number[] {
+  if (rowJ <= 0) return [stitches.KNIT, stitches.PURL];
+
   let rule: number[] = [];
   let currentRow = Array.from(
     { length: pattern.width },
@@ -763,7 +790,7 @@ export function cnOrderAt(i: number, j: number, pattern: StitchPatternType, DS: 
   // console.log("-------------------------------------------------------");
 
   let pairs = cnStitchPairs(CNList, pattern); // Get the stitches that create each CN at location (i,j)
-  pairs.toSorted((a, b) => a[1] - b[1]); // sort pairs by J
+  pairs.sort((a, b) => a[1] - b[1]); // sort pairs by J
   return yarnOrderRecursive(pairs, pattern, orderedCNs);
 }
 
