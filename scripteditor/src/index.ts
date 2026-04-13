@@ -2,7 +2,7 @@ import { render } from "lit-html";
 import Split from "split.js";
 
 import { drawChart } from "./drawChart";
-import { simulate } from "./simulation/simulate";
+import { simulate } from "@shared/simulation/simulate";
 import { runScript, type ScriptResult } from "./execute";
 import { yarnSeparation } from "./yarnSeparation";
 import { view, type AppState, type ViewHandlers } from "./view";

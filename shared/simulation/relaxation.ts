@@ -1,4 +1,4 @@
-import { Vec3 } from "@shared/Vec3";
+import { Vec3 } from "../Vec3";
 import type { DSType, NodeType, ResolvedSegment } from "./types";
 
 export function yarnRelaxation(

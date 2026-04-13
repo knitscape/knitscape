@@ -1,12 +1,14 @@
-import { populateDS, followTheYarn, orderCNs } from "./topology";
-import type { DSType, StitchPatternType } from "./topology";
-import { Vec2 } from "@shared/Vec2";
-import { Vec3 } from "@shared/Vec3";
+import { populateDS, followTheYarn, orderCNs, buildFinalLocationCache } from "./topology";
+import type { DSType, StitchPatternType, NodeType, SegmentType, YarnSegments } from "./types";
+import { Vec2 } from "../Vec2";
+import { Vec3 } from "../Vec3";
 
-import { stitches } from "@shared/stitches";
+import { stitches } from "../stitches";
 
 export function generateTopology(stitchPattern: StitchPatternType): { DS: DSType; yarnPath: [number, number, number][] } {
   const DS = populateDS(stitchPattern);
+
+  buildFinalLocationCache(DS);
 
   orderCNs(DS, stitchPattern);
 
@@ -41,19 +43,6 @@ function getYarnPositionAtNode(DS: DSType, ypIndex: number, i: number, j: number
   );
   return undefined;
 }
-
-export type NodeType = { pos: number[]; f: number[]; v: number[]; q0: number[]; q1: number[] };
-
-export type SegmentType = {
-  source: number;
-  target: number | undefined;
-  sourceOffset: number[] | undefined;
-  targetOffset: number[] | undefined;
-  restLength: number | undefined;
-  leg: [boolean, boolean | undefined];
-};
-
-export type YarnSegments = Record<number, SegmentType[]>;
 
 export function computeYarnPathSpline(
   DS: DSType,
@@ -216,7 +205,7 @@ export function layoutNodes(
     const i = index % DS.width;
     const j = (index - i) / DS.width;
 
-    const chartRow = j < rowMap.length ? rowMap[j] : rowMap[j - 1] + 1;
+    const chartRow = j < rowMap.length ? rowMap[j] : (rowMap.length > 0 ? rowMap[rowMap.length - 1] + 1 : 0);
     let z = 0;
     if (node[0] == stitches.KNIT) {
       z = BED_OFFSET;

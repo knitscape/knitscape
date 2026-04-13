@@ -1,6 +1,6 @@
 import { stitches } from "@shared/stitches";
 import { Bimp } from "@shared/Bimp";
-import type { StitchPatternType } from "./simulation/types";
+import type { StitchPatternType } from "@shared/simulation/types";
 
 function processRow(
   yarnRow: number[],

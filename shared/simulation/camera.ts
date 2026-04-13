@@ -1,4 +1,4 @@
-import { Mat4 } from "@shared/mat4";
+import { Mat4 } from "../mat4";
 
 const FOV = Math.PI / 3; // 60 degrees
 const NEAR = 0.1;

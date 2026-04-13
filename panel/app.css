@@ -33,8 +33,8 @@
 
 @font-face {
   font-family: "National Park";
-  src: url("/assets/fonts/NP-VariableVF.woff2")
-      format("woff2 supports variations"),
+  src:
+    url("/assets/fonts/NP-VariableVF.woff2") format("woff2 supports variations"),
     url("/assets/fonts/NP-VariableVF.woff2") format("woff2-variations");
 }
 
@@ -97,7 +97,12 @@ canvas {
 
 .button-group button.open {
   color: hsl(var(--accent-h), var(--accent-s), 80%);
-  background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+  background-color: hsla(
+    var(--accent-h),
+    var(--accent-s),
+    var(--accent-l),
+    0.3
+  );
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
@@ -146,7 +151,12 @@ canvas {
   a.btn:hover,
   button.btn:hover {
     @apply text-base-13;
-    background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+    background-color: hsla(
+      var(--accent-h),
+      var(--accent-s),
+      var(--accent-l),
+      0.3
+    );
   }
 
   button.btn.icon {
@@ -277,7 +287,8 @@ canvas {
   .input:focus {
     border-color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
     @apply text-base-13;
-    box-shadow: 0 0 0 1px hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) + 60%), 0.8);
+    box-shadow: 0 0 0 1px
+      hsla(var(--accent-h), var(--accent-s), calc(var(--accent-l) + 60%), 0.8);
     @apply outline-[2px] outline-transparent;
   }
 
@@ -500,7 +511,7 @@ input[type="range"]:focus::-moz-range-thumb {
   }
 
   .sim-action-button {
-    @apply flex gap-[0.4em] p-[0.4em];
+    @apply flex gap-[0.4em] p-[0.6em];
   }
 
   .sim-toolbar {
