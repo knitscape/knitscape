@@ -93,7 +93,7 @@ export function chartPaneView() {
       <div
         style="position: absolute; bottom: 0; left: 0; transform: translate(${chartPan.x}px,${-chartPan.y}px);">
         <canvas
-          style="transform: translate(${offsetX}px,${-offsetY}px); outline: 1px solid black;"
+          style="transform: translate(${offsetX}px,${-offsetY}px); outline: 1px solid black; width: ${w}px; height: ${h}px;"
           id="chart-canvas"></canvas>
       </div>
       <svg

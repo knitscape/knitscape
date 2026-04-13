@@ -1,21 +1,24 @@
 import { html } from "lit-html";
+import { EXAMPLES } from "./examples";
 
 export interface AppState {
   code: string;
-  colorMode: "operation" | "yarn";
   previewView: "chart" | "sim";
   cellSize: number;
   statusText: string;
   statusClass: string;
+  activeExample: number; // index into EXAMPLES, -1 = none
 }
 
-export function view(state: AppState, handlers: {
+export interface ViewHandlers {
   onRun: () => void;
-  onModeChange: (mode: "operation" | "yarn") => void;
-  onViewChange: (view: "chart" | "sim") => void;
+  onViewChange: (v: "chart" | "sim") => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-}) {
+  onSelectExample: (i: number) => void;
+}
+
+export function view(state: AppState, handlers: ViewHandlers) {
   return html`
     <div id="toolbar">
       <div id="toolbar-left">
@@ -25,23 +28,6 @@ export function view(state: AppState, handlers: {
           @click=${handlers.onRun}>
           <i class="fa-solid fa-play"></i> Run
         </button>
-
-        <div class="toolbar-sep"></div>
-
-        <div class="btn-group">
-          <button
-            class=${state.colorMode === "operation" ? "active" : ""}
-            title="Show stitch operations"
-            @click=${() => handlers.onModeChange("operation")}>
-            operation
-          </button>
-          <button
-            class=${state.colorMode === "yarn" ? "active" : ""}
-            title="Show yarn colors"
-            @click=${() => handlers.onModeChange("yarn")}>
-            yarn
-          </button>
-        </div>
 
         <div class="toolbar-sep"></div>
 
@@ -72,26 +58,51 @@ export function view(state: AppState, handlers: {
     </div>
 
     <div id="main">
-      <div id="editor-pane">
-        <textarea
-          id="code-editor"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          .value=${state.code}></textarea>
+      <div id="examples-sidebar">
+        <div class="sidebar-header">Examples</div>
+        <div class="sidebar-list">
+          ${EXAMPLES.map(
+            (ex, i) => html`
+              <button
+                class="example-item ${state.activeExample === i ? "active" : ""}"
+                title=${ex.description}
+                @click=${() => handlers.onSelectExample(i)}>
+                ${ex.name}
+              </button>
+            `
+          )}
+        </div>
       </div>
 
-      <div id="preview-pane">
-        <div
-          id="chart-canvas-wrap"
-          class=${state.previewView === "chart" ? "" : "hidden"}>
-          <canvas id="chart-canvas"></canvas>
+      <div id="work-area">
+        <div id="editor-pane">
+          <textarea
+            id="code-editor"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            .value=${state.code}></textarea>
         </div>
-        <div
-          id="sim-canvas-wrap"
-          class=${state.previewView === "sim" ? "" : "hidden"}>
-          <canvas id="sim-canvas"></canvas>
+
+        <div id="preview-pane">
+          <div
+            id="chart-canvas-wrap"
+            class=${state.previewView === "chart" ? "" : "hidden"}>
+            <div class="chart-section">
+              <div class="chart-label">operation</div>
+              <canvas id="chart-canvas-op"></canvas>
+            </div>
+            <div class="chart-section">
+              <div class="chart-label">yarn</div>
+              <canvas id="chart-canvas-yarn"></canvas>
+            </div>
+          </div>
+          <div
+            id="sim-canvas-wrap"
+            class=${state.previewView === "sim" ? "" : "hidden"}>
+            <canvas id="sim-canvas"></canvas>
+          </div>
         </div>
       </div>
     </div>

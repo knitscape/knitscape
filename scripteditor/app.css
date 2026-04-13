@@ -14,9 +14,7 @@
   --base6: #6f6f6f;
   --base7: #8a8a8a;
   --base8: #9b9b9b;
-  --base9: #a1a1a1;
   --base10: #b2b2b2;
-  --base11: #c3c3c3;
   --base12: #d4d4d4;
   --base13: #e5e5e5;
 
@@ -68,7 +66,6 @@ canvas {
   background: var(--base1);
   border-bottom: 1px solid var(--base3);
   flex-shrink: 0;
-  flex-wrap: wrap;
 }
 
 #toolbar-left {
@@ -91,7 +88,7 @@ canvas {
   flex-shrink: 0;
 }
 
-/* ─── Button styles ──────────────────────────────────────────────────────── */
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 
 button {
   font-family: inherit;
@@ -151,6 +148,84 @@ button.run-btn:hover {
   min-height: 0;
 }
 
+/* ─── Examples sidebar ───────────────────────────────────────────────────── */
+
+#examples-sidebar {
+  width: 158px;
+  flex-shrink: 0;
+  background: var(--base1);
+  border-right: 1px solid var(--base3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  font-size: 0.72rem;
+  font-variation-settings: "wght" 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--base7);
+  padding: 0.6rem 0.75rem 0.4rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--base3);
+}
+
+.sidebar-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.3rem 0;
+}
+
+.sidebar-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-list::-webkit-scrollbar-thumb {
+  background: var(--base4);
+  border-radius: 2px;
+}
+
+.example-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.8rem;
+  color: var(--base10);
+  cursor: pointer;
+  border: none;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.example-item:hover {
+  background: var(--base3);
+  color: var(--base13);
+}
+
+.example-item.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── Work area (editor + preview) ──────────────────────────────────────── */
+
+#work-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
 #editor-pane {
   display: flex;
   flex-direction: column;
@@ -177,7 +252,7 @@ button.run-btn:hover {
   outline: none;
   font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
   font-size: 0.82rem;
-  line-height: 1.55;
+  line-height: 1.6;
   padding: 0.75rem 1rem;
   background: var(--base0);
   color: var(--base12);
@@ -195,10 +270,25 @@ button.run-btn:hover {
 #chart-canvas-wrap {
   flex: 1;
   overflow: auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
   padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chart-label {
+  font-size: 0.7rem;
+  font-variation-settings: "wght" 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--base7);
 }
 
 #chart-canvas-wrap.hidden,
@@ -208,8 +298,8 @@ button.run-btn:hover {
 
 #sim-canvas-wrap {
   flex: 1;
-  display: flex;
   overflow: hidden;
+  display: flex;
 }
 
 #sim-canvas {

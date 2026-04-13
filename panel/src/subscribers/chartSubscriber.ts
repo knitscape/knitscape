@@ -1,5 +1,4 @@
 import { drawChart } from "../charting/drawing";
-import { setCanvasSize } from "../utilities/misc";
 import type { GlobalState, StateObserver } from "../types";
 import type { Bimp } from "../../../shared/Bimp";
 
@@ -30,25 +29,27 @@ export function chartSubscriber() {
           colorMode = state.colorMode;
           yarnPalette = state.yarnPalette;
 
-          setCanvasSize(
-            document.getElementById("chart-canvas") as HTMLCanvasElement,
-            Math.round(state.cellWidth * width),
-            Math.round(state.cellHeight * height)
-          );
+          const dpr = window.devicePixelRatio || 1;
+          const cssW = Math.round(state.cellWidth * width);
+          const cssH = Math.round(state.cellHeight * height);
+          const canvas = document.getElementById("chart-canvas") as HTMLCanvasElement;
+          canvas.width = Math.round(cssW * dpr);
+          canvas.height = Math.round(cssH * dpr);
 
           lastStitch = null;
           lastYarn = null;
         }
 
         if (lastStitch != state.chart || lastYarn != state.yarnChart) {
+          const dpr = window.devicePixelRatio || 1;
           drawChart(
             document.getElementById("chart-canvas") as HTMLCanvasElement,
             state.colorMode,
             state.chart,
             state.yarnChart,
             state.yarnPalette,
-            scale,
-            scale * state.cellAspect,
+            scale * dpr,
+            scale * state.cellAspect * dpr,
             lastStitch,
             lastYarn
           );

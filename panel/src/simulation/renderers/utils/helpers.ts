@@ -49,8 +49,9 @@ export function bbox3d(points: number[]): BBox3DResult {
 export function resizeCanvasToDisplaySize(
   canvas: HTMLCanvasElement
 ): boolean {
-  const displayWidth = canvas.clientWidth;
-  const displayHeight = canvas.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = Math.round(canvas.clientWidth * dpr);
+  const displayHeight = Math.round(canvas.clientHeight * dpr);
 
   const needResize =
     canvas.width !== displayWidth || canvas.height !== displayHeight;

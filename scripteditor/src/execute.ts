@@ -36,25 +36,3 @@ export function runScript(code: string): ScriptResult {
   return result as ScriptResult;
 }
 
-/** Derive a per-row yarn sequence from the yarn chart (dominant non-zero yarn per row). */
-export function yarnSequenceFromChart(yarnChart: Bimp): number[] {
-  const sequence: number[] = [];
-  for (let y = 0; y < yarnChart.height; y++) {
-    const counts = new Map<number, number>();
-    let maxYarn = 1;
-    let maxCount = 0;
-    for (let x = 0; x < yarnChart.width; x++) {
-      const v = yarnChart.pixel(x, y);
-      if (v > 0) {
-        const c = (counts.get(v) ?? 0) + 1;
-        counts.set(v, c);
-        if (c > maxCount) {
-          maxCount = c;
-          maxYarn = v;
-        }
-      }
-    }
-    sequence.push(maxYarn);
-  }
-  return sequence;
-}

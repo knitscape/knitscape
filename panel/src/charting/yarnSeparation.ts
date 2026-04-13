@@ -6,7 +6,7 @@ function processRow(
   yarnRow: number[],
   stitchRow: number[],
   direction: string,
-  _yarnSides?: unknown
+  tucks?: boolean
 ): { passes: number[][]; sequence: number[] } {
   let sequence: number[] = [];
 
@@ -47,7 +47,9 @@ function processRow(
       if (nextYarn != undefined && nextYarn != 0 && nextYarn != currentYarn) {
         const nextPassIndex = sequence.indexOf(nextYarn);
         // Add a front at the current location to join the two pieces.
-        if (GLOBAL_STATE.tucks) passes[nextPassIndex][loc] = stitches.FT;
+        const useTucks =
+          tucks !== undefined ? tucks : GLOBAL_STATE.tucks;
+        if (useTucks) passes[nextPassIndex][loc] = stitches.FT;
       }
     }
   }
@@ -55,7 +57,11 @@ function processRow(
   return { passes, sequence };
 }
 
-export function yarnSeparation(stitchChart: Bimp, yarnChart: Bimp) {
+export function yarnSeparation(
+  stitchChart: Bimp,
+  yarnChart: Bimp,
+  tucks?: boolean
+) {
   let st = stitchChart.make2d();
   let yc = yarnChart.make2d();
   let direction = "right";
@@ -68,7 +74,7 @@ export function yarnSeparation(stitchChart: Bimp, yarnChart: Bimp) {
     let stitchRow = st[rowIndex];
     let yarnRow = yc[rowIndex];
 
-    let { passes, sequence } = processRow(yarnRow, stitchRow, direction);
+    let { passes, sequence } = processRow(yarnRow, stitchRow, direction, tucks);
     yarnPasses = yarnPasses.concat(passes);
     yarnSequence.push(...sequence);
     rowMap.push(...Array(passes.length).fill(rowIndex));
