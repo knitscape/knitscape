@@ -20,6 +20,7 @@ export interface ViewHandlers {
   onSelectExample: (i: number) => void;
   onRelax: () => void;
   onReset: () => void;
+  onFitCamera: () => void;
 }
 
 export function view(state: AppState, handlers: ViewHandlers) {
@@ -82,6 +83,12 @@ export function view(state: AppState, handlers: ViewHandlers) {
               ? html`<span>tick: ${state.tickMs.toFixed(1)}ms</span>`
               : ""}
           </div>
+          <button
+            class="fit-camera-btn"
+            title="Fit view"
+            @click=${handlers.onFitCamera}>
+            <i class="fa-solid fa-expand"></i>
+          </button>
           ${state.simState === "idle"
             ? html`<button
                 class="relax-btn"

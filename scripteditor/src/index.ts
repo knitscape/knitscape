@@ -31,6 +31,7 @@ let simStop: (() => void) | undefined;
 let simRelax: (() => void) | undefined;
 let simIsRelaxing: (() => boolean) | undefined;
 let simGetTickMs: (() => number) | undefined;
+let simFitCamera: (() => void) | undefined;
 
 let needsRender = true;
 
@@ -98,6 +99,7 @@ function initSimulation(resetCamera = true) {
   simRelax = result.relax;
   simIsRelaxing = result.isRelaxing;
   simGetTickMs = result.getTickMs;
+  simFitCamera = result.fitCamera;
   setState({ simState: "idle", topologyMs: result.topologyMs, tickMs: 0 });
 }
 
@@ -161,6 +163,7 @@ const handlers: ViewHandlers = {
   onSelectExample: selectExample,
   onRelax: relaxSimulation,
   onReset: () => initSimulation(false),
+  onFitCamera: () => { if (simFitCamera) simFitCamera(); },
 };
 
 function loop() {

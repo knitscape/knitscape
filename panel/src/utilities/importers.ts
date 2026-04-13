@@ -3,6 +3,7 @@ import { GLOBAL_STATE, dispatch } from "../state";
 import { rasterizeChart } from "../charting/evalChart";
 import { bBoxAllBoundaries } from "../charting/helpers";
 import { fitChart } from "../interaction/chartPanZoom";
+import { drawYarns } from "../subscribers/runSimulation";
 import type { WorkspaceJSON } from "../types";
 
 export function hydrateWorkspaceJSON(rawJSON: WorkspaceJSON) {
@@ -92,7 +93,10 @@ export function loadWorkspace(workspace: any) {
     selectedBlock: null,
     blockEditMode: null,
   });
-  setTimeout(() => fitChart());
+  setTimeout(() => {
+    fitChart();
+    drawYarns(true);
+  });
 }
 
 export function uploadWorkspace() {

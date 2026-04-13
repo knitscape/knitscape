@@ -313,6 +313,16 @@ button.run-btn:hover {
   font-size: 0.7rem;
   color: var(--base8);
   pointer-events: none;
+}
+
+.fit-camera-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--base2);
+  border: 1px solid var(--base4);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
   z-index: 10;
 }
 

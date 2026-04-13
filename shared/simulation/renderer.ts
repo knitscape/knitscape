@@ -216,6 +216,7 @@ const IDENTITY = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
 let gl: WebGL2RenderingContext;
 let camera: any;
+let lastBbox: any;
 let segmentProgram: any, joinProgram: any, segmentDepthProgram: any, joinDepthProgram: any;
 let shadowFB: any, shadowTexture: any;
 let shadowViewMatrix: any, shadowProjectionMatrix: any;
@@ -406,9 +407,9 @@ function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
     camera.attach(canvas);
   }
 
-  const bbox = bbox3d(yarnData[0].pts);
-  if (resetCamera) camera.fit(bbox);
-  computeLightMatrices(bbox);
+  lastBbox = bbox3d(yarnData[0].pts);
+  if (resetCamera) camera.fit(lastBbox);
+  computeLightMatrices(lastBbox);
 
   yarns = [];
 
@@ -521,8 +522,13 @@ function updateYarnGeometry(yarnData: any) {
   });
 }
 
+function fitCamera() {
+  if (camera && lastBbox) camera.fit(lastBbox);
+}
+
 export const noodleRenderer = {
   draw,
   init,
   updateYarnGeometry,
+  fitCamera,
 };

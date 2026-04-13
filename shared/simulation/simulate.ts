@@ -104,5 +104,6 @@ export function simulate(
     isRelaxing,
     topologyMs,
     getTickMs: () => lastTickMs,
+    fitCamera: () => renderer.fitCamera(),
   };
 }

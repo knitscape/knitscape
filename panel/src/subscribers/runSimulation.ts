@@ -5,8 +5,11 @@ import type { GlobalState, StateObserver } from "../types";
 
 let simDraw: (() => void) | undefined;
 let simStop: (() => void) | undefined;
-export let relax: (() => void) | undefined;
+let simRelax: (() => void) | undefined;
+let simIsRelaxing: (() => boolean) | undefined;
+export let fitCamera: (() => void) | undefined;
 export let topologyMs = 0;
+export let simState: "idle" | "relaxing" | "relaxed" = "idle";
 
 function debounce(callback: (...args: unknown[]) => void, wait: number) {
   let timeoutId: number | null = null;
@@ -20,49 +23,26 @@ function debounce(callback: (...args: unknown[]) => void, wait: number) {
 
 function r() {
   if (simDraw) simDraw();
+
+  if (simState === "relaxing" && simIsRelaxing && !simIsRelaxing()) {
+    simState = "relaxed";
+  }
+
   requestAnimationFrame(r);
 }
 
-export function drawYarns() {
-  if (GLOBAL_STATE.showTimeNeedleView) return;
-  if (simStop) simStop();
-
-  if (!GLOBAL_STATE.machineChart || !GLOBAL_STATE.rowMap) return;
-
-  const bitmap = GLOBAL_STATE.machineChart;
-  const yarnSequence = GLOBAL_STATE.yarnSequence;
-  const rowMap = GLOBAL_STATE.rowMap;
-  const ops = bitmap.pixels;
-  const width = bitmap.width;
-  const height = bitmap.height;
-
-  const pattern: StitchPatternType = {
-    ops,
-    width,
-    height,
-    yarnSequence,
-    rowMap,
-    yarns: Array.from(yarnSequence.filter((v: number, i: number, arr: number[]) => arr.indexOf(v) === i)),
-    carriagePasses: rowMap.map((ogRow: number) => ogRow % 2 == 0 ? "right" : "left"),
-    op(x: number, y: number): number {
-      if (x > width - 1 || x < 0 || y > height - 1 || y < 0) return -1;
-      return (ops as Uint8ClampedArray).at(x + y * width) ?? -1;
-    },
-  };
-
-  const result = simulate(pattern, {
-    canvas: document.getElementById("sim-canvas") as HTMLCanvasElement,
-    yarnPalette: GLOBAL_STATE.yarnPalette ?? [],
-    cellAspect: GLOBAL_STATE.cellAspect ?? 1,
-  });
-
-  topologyMs = result.topologyMs;
-  relax = result.relax;
-  simStop = result.stopSim;
-  simDraw = result.draw;
+export function relax() {
+  if (simRelax) {
+    simRelax();
+    simState = "relaxing";
+  }
 }
 
-export function resetSimulation() {
+export function resetSim() {
+  drawYarns();
+}
+
+export function drawYarns(resetCamera = false) {
   if (GLOBAL_STATE.showTimeNeedleView) return;
   if (simStop) simStop();
 
@@ -93,20 +73,23 @@ export function resetSimulation() {
     canvas: document.getElementById("sim-canvas") as HTMLCanvasElement,
     yarnPalette: GLOBAL_STATE.yarnPalette ?? [],
     cellAspect: GLOBAL_STATE.cellAspect ?? 1,
-    resetCamera: false,
+    resetCamera,
   });
 
   topologyMs = result.topologyMs;
-  relax = result.relax;
+  simRelax = result.relax;
+  simIsRelaxing = result.isRelaxing;
+  fitCamera = result.fitCamera;
   simStop = result.stopSim;
   simDraw = result.draw;
+  simState = "idle";
 }
 
 export function runSimulation() {
   return (): StateObserver => {
-    const debouncedRun = debounce(drawYarns, 30);
+    const debouncedRun = debounce(() => drawYarns(), 30);
 
-    drawYarns();
+    drawYarns(true);
     r();
 
     return {

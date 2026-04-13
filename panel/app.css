@@ -504,18 +504,29 @@ input[type="range"]:focus::-moz-range-thumb {
   #viz-container {
     min-height: 0;
     overflow: hidden;
+    position: relative;
+    flex: 1;
   }
 
   #sim-canvas {
     @apply w-full h-full;
   }
 
-  .sim-action-button {
-    @apply flex gap-[0.4em] p-[0.6em];
+  .sim-overlay-btn {
+    position: absolute;
+    z-index: 10;
+    @apply text-[0.8em] px-[0.6em] py-[0.3em];
   }
 
-  .sim-toolbar {
-    @apply bg-base-1 text-base-7 flex justify-between gap-[0.4em] py-[0.2em] pr-[0.4em] text-[0.9em] overflow-hidden;
+  .sim-relax-btn {
+    bottom: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .sim-fit-btn {
+    top: 0.5rem;
+    right: 0.5rem;
   }
 }
 
