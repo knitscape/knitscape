@@ -16,6 +16,6 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["structure/src/**/*.ts", "panel/src/**/*.ts", "scripteditor/src/**/*.ts", "shared/**/*.ts"],
+  "include": ["structure/src/**/*.ts", "panel/src/**/*.ts", "knitbit/src/**/*.ts", "shared/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

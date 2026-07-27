@@ -12,7 +12,16 @@
     "deploy": "vite build && echo knitscape.net > ./dist/CNAME && gh-pages -d dist"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.41.0",
     "@eastdesire/jscolor": "^2.5.1",
+    "@lezer/highlight": "^1.2.3",
+    "codemirror": "^6.0.2",
     "d3": "^7.8.5",
     "lit-html": "^2.7.5",
     "split.js": "^1.6.5",

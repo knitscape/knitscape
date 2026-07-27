@@ -13,7 +13,7 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         structure: resolve(__dirname, "structure/index.html"),
         panel: resolve(__dirname, "panel/index.html"),
-        scripteditor: resolve(__dirname, "scripteditor/index.html"),
+        knitbit: resolve(__dirname, "knitbit/index.html"),
       },
     },
   },

@@ -41,4 +41,11 @@ export const Vec3 = {
       return [0, 0, 0];
     }
   },
+
+  distance(a: number[], b: number[]): number {
+    const dx = a[0] - b[0],
+      dy = a[1] - b[1],
+      dz = a[2] - b[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  },
 };

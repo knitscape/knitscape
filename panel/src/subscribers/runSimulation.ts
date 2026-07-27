@@ -1,6 +1,6 @@
 import { GLOBAL_STATE, markDirty } from "../state";
-import { simulate } from "@shared/simulation/simulate";
-import type { StitchPatternType } from "@shared/simulation/types";
+import { simulate } from "@shared/simulation/ds/simulate";
+import type { StitchPatternType } from "@shared/simulation/ds/types";
 import type { GlobalState, StateObserver } from "../types";
 
 let simDraw: (() => void) | undefined;

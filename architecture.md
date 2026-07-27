@@ -8,6 +8,7 @@
   `lit-html` library. I don't want to use web components or a full component
   framework like React or LitElement
 - Use Redux for state management
+-
 
 ## Styling and Interfaces
 

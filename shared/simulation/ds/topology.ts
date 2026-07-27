@@ -1,5 +1,5 @@
-import { stitches } from "../stitches";
-import { cnStates, MAX_H_SHIFT, MAX_V_SHIFT } from "../knittingConstants";
+import { stitches } from "../../stitches";
+import { cnStates, MAX_H_SHIFT, MAX_V_SHIFT } from "../../knittingConstants";
 import type { GridCell, DSType, StitchPatternType } from "./types";
 
 function checkForTransfers(i: number, j: number, DS: DSType): number[][] {

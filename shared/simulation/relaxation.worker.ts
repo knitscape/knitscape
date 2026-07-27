@@ -1,5 +1,5 @@
 import { yarnRelaxation } from "./relaxation";
-import { segmentsToPoints } from "./layout";
+import { segmentsToPoints } from "./segments";
 import type {
   NodeType,
   RelaxSettings,

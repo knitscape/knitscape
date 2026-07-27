@@ -1,9 +1,10 @@
 import { populateDS, followTheYarn, orderCNs, buildFinalLocationCache } from "./topology";
-import type { DSType, StitchPatternType, NodeType, SegmentType, YarnSegments } from "./types";
-import { Vec2 } from "../Vec2";
-import { Vec3 } from "../Vec3";
+import type { DSType, StitchPatternType } from "./types";
+import type { NodeType, SegmentType, YarnSegments } from "../types";
+import { Vec2 } from "../../Vec2";
+import { Vec3 } from "../../Vec3";
 
-import { stitches } from "../stitches";
+import { stitches } from "../../stitches";
 
 export function generateTopology(stitchPattern: StitchPatternType): { DS: DSType; yarnPath: [number, number, number][] } {
   const DS = populateDS(stitchPattern);
@@ -231,16 +232,3 @@ export function layoutNodes(
   });
 }
 
-export function segmentsToPoints(segmentArr: SegmentType[], nodes: NodeType[]): number[] {
-  let controlPoints: number[] = [];
-  for (const { source, sourceOffset, target, targetOffset } of segmentArr) {
-    const sourcePos = nodes[source].pos;
-
-    controlPoints.push(...Vec3.add(sourcePos, sourceOffset ?? [0, 0, 0]));
-
-    const targetPos = nodes[target!].pos;
-
-    controlPoints.push(...Vec3.add(targetPos, targetOffset ?? [0, 0, 0]));
-  }
-  return controlPoints;
-}

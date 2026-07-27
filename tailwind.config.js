@@ -4,7 +4,7 @@ module.exports = {
     "./index.html",
     "./panel/**/*.{html,js,ts}",
     "./structure/**/*.{html,js,ts}",
-    "./scripteditor/**/*.{html,js,ts}",
+    "./knitbit/**/*.{html,js,ts}",
   ],
   theme: {
     extend: {
