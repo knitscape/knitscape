@@ -1,4 +1,4 @@
-import { GLOBAL_STATE } from "../state";
+import { GLOBAL_STATE, markDirty } from "../state";
 import { simulate } from "@shared/simulation/simulate";
 import type { StitchPatternType } from "@shared/simulation/types";
 import type { GlobalState, StateObserver } from "../types";
@@ -9,7 +9,15 @@ let simRelax: (() => void) | undefined;
 let simIsRelaxing: (() => boolean) | undefined;
 export let fitCamera: (() => void) | undefined;
 export let topologyMs = 0;
+// The relax/reset button in simulationPane renders off this, and it changes
+// outside of dispatch(), so every transition has to mark the view dirty.
 export let simState: "idle" | "relaxing" | "relaxed" = "idle";
+
+function setSimState(next: typeof simState) {
+  if (simState === next) return;
+  simState = next;
+  markDirty();
+}
 
 function debounce(callback: (...args: unknown[]) => void, wait: number) {
   let timeoutId: number | null = null;
@@ -25,7 +33,7 @@ function r() {
   if (simDraw) simDraw();
 
   if (simState === "relaxing" && simIsRelaxing && !simIsRelaxing()) {
-    simState = "relaxed";
+    setSimState("relaxed");
   }
 
   requestAnimationFrame(r);
@@ -34,7 +42,7 @@ function r() {
 export function relax() {
   if (simRelax) {
     simRelax();
-    simState = "relaxing";
+    setSimState("relaxing");
   }
 }
 
@@ -82,7 +90,7 @@ export function drawYarns(resetCamera = false) {
   fitCamera = result.fitCamera;
   simStop = result.stopSim;
   simDraw = result.draw;
-  simState = "idle";
+  setSimState("idle");
 }
 
 export function runSimulation() {

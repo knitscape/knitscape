@@ -1,7 +1,7 @@
 import Split from "split.js";
 import { render } from "lit-html";
 
-import { GLOBAL_STATE, StateMonitor } from "./state";
+import { GLOBAL_STATE, StateMonitor, consumeDirty, markDirty } from "./state";
 
 import { runSimulation } from "./subscribers/runSimulation";
 // import { visualizationSubscriber } from "./subscribers/visualizationSubscriber";
@@ -21,9 +21,16 @@ import { mainView } from "./views/mainView";
 
 const DEFAULT_WORKSPACE = "rib";
 
-function r() {
+// Render right now, whether or not anything is marked dirty. Used for the first
+// paint and for dispatches that need the DOM current before subscribers run.
+function renderView() {
+  consumeDirty();
   render(mainView(), document.body);
-  window.requestAnimationFrame(r);
+}
+
+function renderLoop() {
+  if (consumeDirty()) render(mainView(), document.body);
+  window.requestAnimationFrame(renderLoop);
 }
 
 async function init() {
@@ -33,7 +40,9 @@ async function init() {
 
   hydrateWorkspaceJSON(workspace as any);
 
-  r();
+  // Split() needs the panes to exist, so the first paint has to be synchronous.
+  renderView();
+  renderLoop();
 
   Split(["#chart-pane", "#view-pane"], {
     sizes: [30, 70],
@@ -44,7 +53,7 @@ async function init() {
   window.addEventListener("keydown", globalKeydown);
   window.addEventListener("keyup", globalKeyup);
 
-  StateMonitor.requestRender = () => render(mainView(), document.body);
+  StateMonitor.requestRender = renderView;
 
   StateMonitor.register([
     chartEvalSubscriber(),
@@ -62,4 +71,7 @@ async function init() {
 }
 
 window.onload = init;
-window.onresize = measureWindow;
+window.onresize = () => {
+  measureWindow();
+  markDirty();
+};

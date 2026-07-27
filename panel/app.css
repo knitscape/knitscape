@@ -107,21 +107,25 @@ canvas {
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 
-.scroller {
+.scroller,
+.modal-content {
   scrollbar-width: thin;
   scrollbar-color: #1a1919 transparent;
 }
 
-.scroller::-webkit-scrollbar {
+.scroller::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
-.scroller::-webkit-scrollbar-track {
+.scroller::-webkit-scrollbar-track,
+.modal-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.scroller::-webkit-scrollbar-thumb {
+.scroller::-webkit-scrollbar-thumb,
+.modal-content::-webkit-scrollbar-thumb {
   background-color: #000000c9;
   border-radius: 20px;
   border: 3px solid transparent;
@@ -244,10 +248,13 @@ canvas {
 
 @layer components {
   .modal {
-    @apply min-w-[200px] absolute bg-base-3 z-[100] rounded-[10px] px-[0.6em] py-[0.5em];
+    @apply min-w-[200px] absolute flex flex-col bg-base-3 z-[100] rounded-[10px] px-[0.6em] py-[0.5em];
     margin: 100px;
     align-self: center;
     box-shadow: 0 0 10px 3px #0000009e;
+    /* Never taller than the viewport less the 100px margin above and below —
+       the content area scrolls instead of running off the bottom of the page. */
+    max-height: calc(var(--vh, 1vh) * 100 - 200px);
   }
 
   .modal > h2 {
@@ -255,7 +262,10 @@ canvas {
   }
 
   .modal-content {
-    @apply flex flex-col gap-[0.4em];
+    @apply flex flex-col gap-[0.4em] overflow-y-auto;
+    /* Flex items default to min-height:auto, which would refuse to shrink below
+       the content height and defeat the overflow above. */
+    min-height: 0;
   }
 
   #settings-modal {
@@ -630,7 +640,6 @@ input[type="range"]:focus::-moz-range-thumb {
 .point {
   fill: rgb(223, 223, 223);
   stroke: rgb(255, 255, 255);
-  r: 6;
   stroke-width: 2px;
   filter: drop-shadow(0px 0px 2px black);
   pointer-events: all;

@@ -1,6 +1,7 @@
 import { html } from "lit-html";
 import { GLOBAL_STATE, dispatch } from "../state";
 import { editYarnColor, deleteYarn, addRandomYarn } from "../charting/yarn";
+import type { Bimp } from "@shared/Bimp";
 
 export function yarnPane() {
   const { cellHeight, chartPan, chart, bbox, yarnPalette, yarnExpanded } =
@@ -52,26 +53,57 @@ export function yarnPane() {
   </div>`;
 }
 
+// Which yarns appear in each chart row. This is recomputed only when the yarn
+// chart itself changes — yarnSequence() runs on every animation frame, and
+// scanning the whole chart (plus a make2d() copy of it) each time dominated the
+// frame budget on tall charts.
+let rowYarnsCache: { chart: Bimp; count: number; rows: Set<number>[] } | null =
+  null;
+
+function rowYarns(yarnChart: Bimp, paletteLength: number): Set<number>[] {
+  if (
+    rowYarnsCache &&
+    rowYarnsCache.chart === yarnChart &&
+    rowYarnsCache.count === paletteLength
+  ) {
+    return rowYarnsCache.rows;
+  }
+
+  const { width, height, pixels } = yarnChart;
+  const rows: Set<number>[] = new Array(height);
+
+  for (let row = 0; row < height; row++) {
+    const present = new Set<number>();
+    const start = row * width;
+    for (let x = 0; x < width; x++) present.add(pixels[start + x]);
+    rows[row] = present;
+  }
+
+  rowYarnsCache = { chart: yarnChart, count: paletteLength, rows };
+  return rows;
+}
+
 export function yarnSequence() {
   let { yarnChart, yarnPalette, scale, cellAspect } = GLOBAL_STATE;
   if (!yarnChart) return;
   let cellHeight = scale * cellAspect;
 
-  let yarn2d = yarnChart.make2d();
+  const palette = yarnPalette ?? [];
+  const rows = rowYarns(yarnChart, palette.length);
+  const gap = cellHeight < 10 ? 0 : 1;
 
   const yarns = [];
   for (let row = 0; row < yarnChart.height; row++) {
+    const present = rows[row];
     yarns.push(html`<div
       data-yarnrow=${row}
       class="yarn-row"
-      style="gap: ${cellHeight < 10 ? 0 : 1}px">
-      ${(yarnPalette ?? []).map(
+      style="gap: ${gap}px">
+      ${palette.map(
         (yarn, index) =>
           html`<div
             data-yarnindex=${index}
-            class="yarn-cell ${yarn2d[row].includes(index + 1)
-              ? "active"
-              : "inactive"}"
+            class="yarn-cell ${present.has(index + 1) ? "active" : "inactive"}"
             style="--color: ${yarn}"></div>`
       )}
     </div>`);

@@ -7,6 +7,41 @@ import {
   movePathTile,
 } from "../interaction/pathInteraction";
 
+// Annotations are toggled by the `showAnnotations` class, but building them
+// unconditionally left three extra nodes per point and per segment in the DOM
+// for lit to re-diff on every frame. Only emit them when they're visible.
+function slopeAnnotation(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  cellWidth: number,
+  cellHeight: number
+) {
+  if (!GLOBAL_STATE.annotations) return "";
+  return svg`<g transform="translate(
+  ${(x1 - (x1 - x2) / 2) * cellWidth}
+  ${(y1 - (y1 - y2) / 2) * cellHeight})
+  scale (1, -1)">
+  <rect x="0" y="0" width="60" height="20" class="annotation-container" rx="5" fill="#9ce7b2"></rect>
+  <text x="10" y="14" textLength="40" class="annotation">
+    ${((y1 - y2) / (x1 - x2)).toFixed(1)}
+  </text>
+</g>`;
+}
+
+function pointAnnotation(x: number, y: number, cellWidth: number, cellHeight: number) {
+  if (!GLOBAL_STATE.annotations) return "";
+  return svg`<g transform="translate(${x * cellWidth} ${y * cellHeight}) scale (1, -1)">
+  <rect x="10" y="-30" width="70" height="20" class="annotation-container" rx="5" fill="#e7e09c"></rect>
+  <text x="15" y="-15" textLength="60" class="annotation">[${
+    x - GLOBAL_STATE.bbox.xMin
+  },${y - GLOBAL_STATE.bbox.yMin}]</text>
+</g>`;
+}
+
+export { slopeAnnotation, pointAnnotation };
+
 function lines(pathIndex: number, pts: Vec2[], cellWidth: number, cellHeight: number) {
   const lineElements = [];
 
@@ -31,15 +66,7 @@ function lines(pathIndex: number, pts: Vec2[], cellWidth: number, cellHeight: nu
       y1=${y1 * cellHeight}
       x2=${x2 * cellWidth}
       y2=${y2 * cellHeight}></line>
-<g transform="translate(
-  ${(x1 - (x1 - x2) / 2) * cellWidth}
-  ${(y1 - (y1 - y2) / 2) * cellHeight})
-  scale (1, -1)">
-  <rect x="0" y="0" width="60" height="20" class="annotation-container" rx="5" fill="#9ce7b2"></rect>
-  <text x="10" y="14" textLength="40" class="annotation">
-    ${((y1 - y2) / (x1 - x2)).toFixed(1)}
-  </text>
-</g>`
+${slopeAnnotation(x1, y1, x2, y2, cellWidth, cellHeight)}`
     );
   }
 
@@ -53,14 +80,9 @@ function points(pathIndex: number, pts: Vec2[], cellWidth: number, cellHeight: n
       data-pathindex="${pathIndex}"
       data-pointindex="${i}"
       cx="${x * cellWidth}"
-      cy="${y * cellHeight}" />
-
-<g transform="translate(${x * cellWidth} ${y * cellHeight})  scale (1, -1)" >
-  <rect x="10" y="-30" width="70" height="20" class="annotation-container" rx="5" fill="#e7e09c"></rect>
-  <text x="15" y="-15" textLength="60" class="annotation">[${
-    x - GLOBAL_STATE.bbox.xMin
-  },${y - GLOBAL_STATE.bbox.yMin}]</text>
-</g>`
+      cy="${y * cellHeight}"
+      r="6" />
+${pointAnnotation(x, y, cellWidth, cellHeight)}`
   );
 }
 

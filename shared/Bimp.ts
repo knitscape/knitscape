@@ -28,37 +28,65 @@ export class Bimp {
     this.pixels = new Uint8ClampedArray(pixels);
   }
 
+  // Takes ownership of `pixels` instead of copying it. Only safe when the
+  // caller just allocated the array and holds no other reference to it.
+  static adopt(width: number, height: number, pixels: Uint8ClampedArray): Bimp {
+    const bimp: Bimp = Object.create(Bimp.prototype);
+    bimp.width = width;
+    bimp.height = height;
+    bimp.pixels = pixels;
+    return bimp;
+  }
+
   static fromJSON(jsonObj: BimpJSON): Bimp {
     return new Bimp(jsonObj.width, jsonObj.height, jsonObj.pixels);
   }
 
   static empty(width: number, height: number, color: number): Bimp {
-    const pixels = new Array(width * height).fill(color);
-    return new Bimp(width, height, pixels);
+    const pixels = new Uint8ClampedArray(width * height);
+    if (color !== 0) pixels.fill(color);
+    return Bimp.adopt(width, height, pixels);
   }
 
   static fromTile(width: number, height: number, tile: Bimp): Bimp {
-    const tiled: number[] = [];
+    const tiled = new Uint8ClampedArray(width * height);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        tiled.push(tile.pixel(x % tile.width, y % tile.height));
+        tiled[x + y * width] = tile.pixel(x % tile.width, y % tile.height);
       }
     }
-    return new Bimp(width, height, tiled);
+    return Bimp.adopt(width, height, tiled);
   }
 
   overlay(overlayBimp: Bimp, pos: Vec2, skip?: number, avoid?: number): Bimp {
-    const changes: PixelChange[] = [];
+    const copy = this.pixels.slice();
+    this.overlayInto(copy, overlayBimp, pos, skip, avoid);
+    return Bimp.adopt(this.width, this.height, copy);
+  }
+
+  // Writes an overlay straight into a pixel buffer. Lets callers that stamp the
+  // same tile many times (path tiling) pay for one buffer copy instead of one
+  // copy plus a change-object array per stamp.
+  overlayInto(
+    target: Uint8ClampedArray,
+    overlayBimp: Bimp,
+    pos: Vec2,
+    skip?: number,
+    avoid?: number
+  ): void {
     for (let y = 0; y < overlayBimp.height; y++) {
+      const ty = pos[1] + y;
+      if (ty < 0 || ty >= this.height) continue;
       for (let x = 0; x < overlayBimp.width; x++) {
         const color = overlayBimp.pixel(x, y);
         if (skip !== undefined && skip !== null && color === skip) continue;
         if (avoid !== undefined && avoid !== null && this.pixel(x, y) === avoid)
           continue;
-        changes.push({ x: pos[0] + x, y: pos[1] + y, color });
+        const tx = pos[0] + x;
+        if (tx < 0 || tx >= this.width) continue;
+        target[tx + ty * this.width] = color;
       }
     }
-    return this.draw(changes);
   }
 
   toJSON(): BimpJSON {
@@ -83,22 +111,27 @@ export class Bimp {
   }
 
   resize(width: number, height: number, emptyColor: number = 0): Bimp {
-    const resized: number[] = [];
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        resized.push(
-          y >= this.height || x >= this.width ? emptyColor : this.pixel(x, y)
-        );
+    const resized = new Uint8ClampedArray(width * height);
+    if (emptyColor !== 0) resized.fill(emptyColor);
+    const copyWidth = Math.min(width, this.width);
+    const copyHeight = Math.min(height, this.height);
+    for (let y = 0; y < copyHeight; y++) {
+      for (let x = 0; x < copyWidth; x++) {
+        resized[x + y * width] = this.pixels[x + y * this.width];
       }
     }
-    return new Bimp(width, height, resized);
+    return Bimp.adopt(width, height, resized);
   }
 
   make2d(): number[][] {
-    const copy = Array.from(this.pixels).slice();
-    const newArray: number[][] = [];
-    while (copy.length > 0) newArray.push(copy.splice(0, this.width));
-    return newArray;
+    const rows: number[][] = new Array(this.height);
+    for (let y = 0; y < this.height; y++) {
+      const row: number[] = new Array(this.width);
+      const start = y * this.width;
+      for (let x = 0; x < this.width; x++) row[x] = this.pixels[start + x];
+      rows[y] = row;
+    }
+    return rows;
   }
 
   vMirror(): Bimp {
@@ -122,14 +155,15 @@ export class Bimp {
   pixel(x: number, y: number): number {
     if (x > this.width - 1 || x < 0 || y > this.height - 1 || y < 0)
       return -1;
-    return this.pixels.at(x + y * this.width)!;
+    return this.pixels[x + y * this.width];
   }
 
   pixelAt(x: number, y: number): number {
     if (x >= this.width || y >= this.height) return -1;
     if (x < 0) x = this.width + x;
     if (y < 0) y = this.height + y;
-    return this.pixels.at(x + y * this.width)!;
+    if (x < 0 || y < 0) return -1;
+    return this.pixels[x + y * this.width];
   }
 
   draw(changes: PixelChange[]): Bimp {
@@ -138,7 +172,7 @@ export class Bimp {
       if (x < 0 || y < 0 || x >= this.width || y >= this.height) continue;
       copy[x + y * this.width] = color;
     }
-    return new Bimp(this.width, this.height, copy);
+    return Bimp.adopt(this.width, this.height, copy);
   }
 
   indexedDraw(changes: IndexedChange[]): Bimp {
@@ -147,7 +181,7 @@ export class Bimp {
       if (index >= this.pixels.length) continue;
       copy[index] = color;
     }
-    return new Bimp(this.width, this.height, copy);
+    return Bimp.adopt(this.width, this.height, copy);
   }
 
   indexedBrush(index: number, color: number): Bimp {
@@ -163,20 +197,18 @@ export class Bimp {
     if (targetColor === color) return this.draw([]);
     const around: Vec2[] = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const drawn: PixelChange[] = [{ x: pos[0], y: pos[1], color }];
+    // Membership set keyed by flat index, so the "already queued?" check stays
+    // O(1) instead of scanning the whole frontier for every candidate.
+    const seen = new Set<number>([pos[0] + pos[1] * this.width]);
     for (let done = 0; done < drawn.length; done++) {
       for (const [dx, dy] of around) {
         const x = drawn[done].x + dx;
         const y = drawn[done].y + dy;
-        if (
-          x >= 0 &&
-          x < this.width &&
-          y >= 0 &&
-          y < this.height &&
-          this.pixel(x, y) === targetColor &&
-          !drawn.some((p) => p.x === x && p.y === y)
-        ) {
-          drawn.push({ x, y, color });
-        }
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) continue;
+        const index = x + y * this.width;
+        if (seen.has(index) || this.pixels[index] !== targetColor) continue;
+        seen.add(index);
+        drawn.push({ x, y, color });
       }
     }
     return this.draw(drawn);

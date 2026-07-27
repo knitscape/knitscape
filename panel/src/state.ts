@@ -82,6 +82,27 @@ let GLOBAL_STATE: GlobalState = {
   reverseScroll: false,
 };
 
+// The main view is re-rendered from a requestAnimationFrame loop. Rather than
+// rebuilding the whole lit template 60 times a second whether or not anything
+// changed, the loop only renders when something has marked the view dirty.
+//
+// dispatch() marks it for you. Anything that changes what a view reads WITHOUT
+// going through dispatch — direct GLOBAL_STATE writes, or module-local state a
+// view closes over — has to call markDirty() itself, or its change will not
+// show up until the next unrelated render.
+let viewDirty = true;
+
+function markDirty() {
+  viewDirty = true;
+}
+
+// Returns whether a render is needed, and clears the flag.
+function consumeDirty() {
+  const wasDirty = viewDirty;
+  viewDirty = false;
+  return wasDirty;
+}
+
 function shouldSnapshot(action: Partial<GlobalState>) {
   if (!(GLOBAL_STATE.lastSnapshot < Date.now() - SNAPSHOT_INTERVAL))
     return false;
@@ -131,11 +152,14 @@ function undo() {
     snapshots: GLOBAL_STATE.snapshots.slice(1),
   };
 
+  markDirty();
   StateMonitor.syncState(GLOBAL_STATE, changes);
 }
 
 function dispatch(action: Partial<GlobalState>, requestRender = false) {
   const changes = Object.keys(action);
+
+  markDirty();
 
   if (requestRender) {
     updateState(action);
@@ -178,4 +202,4 @@ const StateMonitor: StateMonitorType = (() => {
   return monitor;
 })() as StateMonitorType & { setRenderCallback?: (cb: () => void) => void };
 
-export { GLOBAL_STATE, undo, dispatch, StateMonitor };
+export { GLOBAL_STATE, undo, dispatch, StateMonitor, markDirty, consumeDirty };

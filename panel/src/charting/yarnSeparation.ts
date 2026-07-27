@@ -75,9 +75,10 @@ export function yarnSeparation(
     let yarnRow = yc[rowIndex];
 
     let { passes, sequence } = processRow(yarnRow, stitchRow, direction, tucks);
-    yarnPasses = yarnPasses.concat(passes);
-    yarnSequence.push(...sequence);
-    rowMap.push(...Array(passes.length).fill(rowIndex));
+    // concat() rebuilt the whole accumulator on every row, making this O(rows^2).
+    for (const pass of passes) yarnPasses.push(pass);
+    for (const yarn of sequence) yarnSequence.push(yarn);
+    for (let i = 0; i < passes.length; i++) rowMap.push(rowIndex);
 
     direction = direction == "right" ? "left" : "right";
   }

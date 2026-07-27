@@ -1,6 +1,8 @@
 import { html } from "lit-html";
-import { GLOBAL_STATE } from "../state";
+import { GLOBAL_STATE, markDirty } from "../state";
 
+// Pan/zoom for this pane lives here rather than in GLOBAL_STATE, so every write
+// below has to mark the view dirty for the render loop to pick it up.
 let scale = 15;
 let x = 35;
 let y = 0;
@@ -39,6 +41,7 @@ function zoomAtPoint(pt: { x: number; y: number }, newScale: number) {
   scale = newScale;
   x = Math.round(pt.x - start.x * newScale);
   y = Math.round(pt.y - start.y * newScale);
+  markDirty();
 }
 
 function zoom(e: WheelEvent) {
@@ -75,6 +78,7 @@ function pan(e: PointerEvent) {
 
       x = Math.round(startPan.x - dx);
       y = Math.round(startPan.y - dy);
+      markDirty();
     }
   }
 

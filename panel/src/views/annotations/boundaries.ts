@@ -6,6 +6,7 @@ import {
   editBoundaryFill,
   resizeFillBlock,
 } from "../../interaction/boundaryInteraction";
+import { pointAnnotation, slopeAnnotation } from "../paths";
 
 function boundaryPoints(boundaryIndex: number, pts: Vec2[], cellWidth: number, cellHeight: number) {
   return pts.map(
@@ -15,13 +16,9 @@ function boundaryPoints(boundaryIndex: number, pts: Vec2[], cellWidth: number, c
   data-boundaryindex="${boundaryIndex}"
   data-index="${i}"
   cx="${x * cellWidth}"
-  cy="${y * cellHeight}" />
-<g transform="translate(${x * cellWidth} ${y * cellHeight})  scale (1, -1)">
-  <rect x="10" y="-30" width="70" height="20" class="annotation-container" rx="5" fill="#e7e09c"></rect>
-  <text x="15" y="-15" textLength="60" class="annotation">[${
-    x - GLOBAL_STATE.bbox.xMin
-  },${y - GLOBAL_STATE.bbox.yMin}]</text>
-</g>
+  cy="${y * cellHeight}"
+  r="6" />
+${pointAnnotation(x, y, cellWidth, cellHeight)}
       `
   );
 }
@@ -49,16 +46,7 @@ function boundaryPaths(boundaryIndex: number, pts: Vec2[], cellWidth: number, ce
       y1=${y1 * cellHeight}
       x2=${x2 * cellWidth}
       y2=${y2 * cellHeight}></line>
-
-<g transform="translate(
-  ${(x1 - (x1 - x2) / 2) * cellWidth}
-  ${(y1 - (y1 - y2) / 2) * cellHeight})
-  scale (1, -1)">
-  <rect x="0" y="0" width="60" height="20" class="annotation-container" rx="5" fill="#9ce7b2"></rect>
-  <text x="10" y="14" textLength="40" class="annotation">
-    ${((y1 - y2) / (x1 - x2)).toFixed(1)}
-  </text>
-</g>`
+${slopeAnnotation(x1, y1, x2, y2, cellWidth, cellHeight)}`
     );
   }
   return paths;

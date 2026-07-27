@@ -1,16 +1,21 @@
 import { stitches } from "@shared/stitches";
-import type { Bimp, Vec2 } from "@shared/Bimp";
+import { Bimp } from "@shared/Bimp";
+import type { Vec2 } from "@shared/Bimp";
 import type { KnitPath } from "../types";
 
+// Stamps the tile along the line directly into `target`, which the caller owns.
+// Every stamp used to allocate a change array and a fresh copy of the whole
+// chart, so a long path cost O(pathLength * chartArea).
 function plotLine(
   [x0, y0]: Vec2,
   [x1, y1]: Vec2,
   offset: Vec2,
   chart: Bimp,
+  target: Uint8ClampedArray,
   tile: Bimp,
   mode: string,
   ignore: number
-): Bimp {
+): void {
   let dx = Math.abs(x1 - x0);
   let sx = x0 < x1 ? 1 : -1;
   let dy = -Math.abs(y1 - y0);
@@ -20,9 +25,17 @@ function plotLine(
   let lastX: number | null = x0;
   let lastY: number | null = y0;
 
+  const stamp = () =>
+    chart.overlayInto(
+      target,
+      tile,
+      [x0 + offset[0], y0 + offset[1]],
+      ignore
+    );
+
   while (true) {
     if (mode == "overlap") {
-      chart = chart.overlay(tile, [x0 + offset[0], y0 + offset[1]], ignore);
+      stamp();
     } else if (mode == "tiled") {
       if (
         lastX == null ||
@@ -30,19 +43,19 @@ function plotLine(
         Math.abs(x0 - lastX) >= tile.width ||
         Math.abs(y0 - lastY) >= tile.height
       ) {
-        chart = chart.overlay(tile, [x0 + offset[0], y0 + offset[1]], ignore);
+        stamp();
         lastX = x0;
         lastY = y0;
       }
     } else if (mode == "xDiff") {
       if (x0 != lastX) {
-        chart = chart.overlay(tile, [x0 + offset[0], y0 + offset[1]], ignore);
+        stamp();
         lastX = x0;
         lastY = y0;
       }
     } else if (mode == "yDiff") {
       if (y0 != lastY) {
-        chart = chart.overlay(tile, [x0 + offset[0], y0 + offset[1]], ignore);
+        stamp();
         lastX = x0;
         lastY = y0;
       }
@@ -61,8 +74,6 @@ function plotLine(
       y0 = y0 + sy;
     }
   }
-
-  return chart;
 }
 
 export function pathTiling(
@@ -70,26 +81,34 @@ export function pathTiling(
   yarnChart: Bimp,
   { pts, offset, yarnBlock, stitchBlock, tileMode }: KnitPath
 ) {
+  const stitchPixels = stitchChart.pixels.slice();
+  const yarnPixels = yarnChart.pixels.slice();
+
   for (let i = 0; i < pts.length - 1; i++) {
-    stitchChart = plotLine(
+    plotLine(
       pts[i],
       pts[i + 1],
       offset,
       stitchChart,
+      stitchPixels,
       stitchBlock,
       tileMode,
       stitches.TRANSPARENT
     );
-    yarnChart = plotLine(
+    plotLine(
       pts[i],
       pts[i + 1],
       offset,
       yarnChart,
+      yarnPixels,
       yarnBlock,
       tileMode,
       0
     );
   }
 
-  return { stitch: stitchChart, yarn: yarnChart };
+  return {
+    stitch: Bimp.adopt(stitchChart.width, stitchChart.height, stitchPixels),
+    yarn: Bimp.adopt(yarnChart.width, yarnChart.height, yarnPixels),
+  };
 }

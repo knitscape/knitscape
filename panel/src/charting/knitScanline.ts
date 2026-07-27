@@ -1,5 +1,5 @@
 import { stitches } from "@shared/stitches";
-import type { Bimp } from "@shared/Bimp";
+import { Bimp } from "@shared/Bimp";
 import type { Boundary, Region } from "../types";
 
 interface Edge {
@@ -29,55 +29,59 @@ function addEdge(edgeTable: Edge[], [x1, y1]: [number, number], [x2, y2]: [numbe
   });
 }
 
+// Horizontal run, inclusive of both ends — matches what Bimp.line() produces
+// for two points that share a y, without copying the chart.
+function hLine(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  xA: number,
+  xB: number,
+  y: number,
+  color: number
+) {
+  if (y < 0 || y >= height) return;
+  const from = Math.min(xA, xB);
+  const to = Math.max(xA, xB);
+  const rowStart = y * width;
+  for (let x = Math.max(from, 0); x <= Math.min(to, width - 1); x++) {
+    pixels[rowStart + x] = color;
+  }
+}
+
 function applyShaping(
-  stitchChart: Bimp,
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
   y: number,
   xLeft: number,
   xRight: number,
   edgeLeft: Edge,
   edgeRight: Edge,
   shaping: number
-): Bimp {
-  if (shaping < 1) return stitchChart;
+) {
+  if (shaping < 1) return;
   let diffLeft = xLeft - edgeLeft.xLast;
   let diffRight = xRight - edgeRight.xLast;
 
   if (Math.abs(edgeLeft.dx) <= 1) {
     if (diffLeft === 1) {
-      stitchChart = stitchChart.line(
-        [edgeLeft.xLast, y - 1],
-        [edgeLeft.xLast + shaping - 1, y - 1],
-        stitches.FXR1
-      );
+      hLine(pixels, width, height, edgeLeft.xLast, edgeLeft.xLast + shaping - 1, y - 1, stitches.FXR1);
     } else if (diffLeft === -1) {
-      stitchChart = stitchChart.line(
-        [edgeLeft.xLast, y - 1],
-        [edgeLeft.xLast + shaping - 1, y - 1],
-        stitches.FXL1
-      );
+      hLine(pixels, width, height, edgeLeft.xLast, edgeLeft.xLast + shaping - 1, y - 1, stitches.FXL1);
     }
   }
 
   if (Math.abs(edgeRight.dx) <= 1) {
     if (diffRight === -1) {
-      stitchChart = stitchChart.line(
-        [edgeRight.xLast - shaping, y - 1],
-        [edgeRight.xLast - 1, y - 1],
-        stitches.FXL1
-      );
+      hLine(pixels, width, height, edgeRight.xLast - shaping, edgeRight.xLast - 1, y - 1, stitches.FXL1);
     } else if (diffRight === 1) {
-      stitchChart = stitchChart.line(
-        [edgeRight.xLast - shaping, y - 1],
-        [edgeRight.xLast - 1, y - 1],
-        stitches.FXR1
-      );
+      hLine(pixels, width, height, edgeRight.xLast - shaping, edgeRight.xLast - 1, y - 1, stitches.FXR1);
     }
   }
 
   edgeLeft.xLast = xLeft;
   edgeRight.xLast = xRight;
-
-  return stitchChart;
 }
 
 export function knitScanline(
@@ -93,6 +97,13 @@ export function knitScanline(
   }
 
   edges.sort((a, b) => a.yMin - b.yMin); // sort edges by their min y
+
+  // The scanline used to call Bimp.draw() twice per span, and each call copied
+  // both charts in full — so filling an H-row boundary cost O(H) whole-chart
+  // copies. Write into one buffer per chart instead and wrap them up at the end.
+  const { width, height } = stitchChart;
+  const stitchPixels = stitchChart.pixels.slice();
+  const yarnPixels = yarnChart.pixels.slice();
 
   let activeEdges: Edge[] = [];
   let y = 0;
@@ -120,41 +131,46 @@ export function knitScanline(
 
       if (xLeft == xRight) continue;
 
-      let stitchChanges: { x: number; y: number; color: number }[] = [];
+      const inRow = y >= 0 && y < height;
+      const rowStart = y * width;
+      const xFrom = Math.max(xLeft, 0);
+      const xTo = Math.min(xRight, width);
+
       let SBy = (y - pos[1]) % stitchBlock.height;
 
-      for (let x = xLeft; x < xRight; x++) {
-        let SBx = (x - pos[0]) % stitchBlock.width;
+      if (inRow) {
+        for (let x = xFrom; x < xTo; x++) {
+          let SBx = (x - pos[0]) % stitchBlock.width;
 
-        let operation = stitchBlock.pixelAt(SBx, SBy);
-        if (operation == stitches.TRANSPARENT) continue;
-        stitchChanges.push({ x, y, color: operation });
-      }
-      stitchChart = stitchChart.draw(stitchChanges);
-
-      // Apply the yarn block texture
-      let yarnChanges: { x: number; y: number; color: number }[] = [];
-      let YBy = (y - pos[1]) % yarnBlock.height;
-
-      for (let x = xLeft; x < xRight; x++) {
-        let YBx = (x - pos[0]) % yarnBlock.width;
-
-        let yarnColor = yarnBlock.pixelAt(YBx, YBy);
-
-        if (yarnColor == 0) {
-          // if there's no assigned yarn check what's below it in the chart
-          if (yarnChart.pixel(x, y) == 0) {
-            // if it's also transparent, assign yarn index 1 to make sure we have a yarn
-            yarnChanges.push({ x, y, color: 1 });
-          }
-          continue;
+          let operation = stitchBlock.pixelAt(SBx, SBy);
+          if (operation == stitches.TRANSPARENT) continue;
+          stitchPixels[rowStart + x] = operation;
         }
-        yarnChanges.push({ x, y, color: yarnColor });
-      }
-      yarnChart = yarnChart.draw(yarnChanges);
 
-      stitchChart = applyShaping(
-        stitchChart,
+        // Apply the yarn block texture
+        let YBy = (y - pos[1]) % yarnBlock.height;
+
+        for (let x = xFrom; x < xTo; x++) {
+          let YBx = (x - pos[0]) % yarnBlock.width;
+
+          let yarnColor = yarnBlock.pixelAt(YBx, YBy);
+
+          if (yarnColor == 0) {
+            // if there's no assigned yarn check what's below it in the chart
+            if (yarnPixels[rowStart + x] == 0) {
+              // if it's also transparent, assign yarn index 1 to make sure we have a yarn
+              yarnPixels[rowStart + x] = 1;
+            }
+            continue;
+          }
+          yarnPixels[rowStart + x] = yarnColor;
+        }
+      }
+
+      applyShaping(
+        stitchPixels,
+        width,
+        height,
         y,
         xLeft,
         xRight,
@@ -175,5 +191,10 @@ export function knitScanline(
     }
   }
 
-  return { stitch: stitchChart, yarn: yarnChart };
+  return {
+    stitch: Bimp.adopt(width, height, stitchPixels),
+    // stitchChart and yarnChart are always allocated at the same size, which is
+    // what lets the two buffers share one row-index calculation above.
+    yarn: Bimp.adopt(width, height, yarnPixels),
+  };
 }

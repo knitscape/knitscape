@@ -2,7 +2,7 @@ import { html, svg } from "lit-html";
 import { when } from "lit-html/directives/when.js";
 import { classMap } from "lit-html/directives/class-map.js";
 
-import { GLOBAL_STATE } from "../state";
+import { GLOBAL_STATE, markDirty } from "../state";
 
 import {
   chartContextMenu,
@@ -26,13 +26,19 @@ import { modeToolbar } from "./toolbars";
 import { pickers } from "./pickers";
 
 function trackPointer(e: PointerEvent) {
-  const { cellWidth, cellHeight, chartPan, bbox } = GLOBAL_STATE;
+  const { cellWidth, cellHeight, chartPan, bbox, pointer } = GLOBAL_STATE;
   let [x, y] = currentTargetPointerPos(e);
 
-  GLOBAL_STATE.pointer = [
-    Math.floor((x - chartPan.x) / cellWidth - bbox.xMin),
-    Math.floor((y - chartPan.y) / cellHeight - bbox.yMin),
-  ];
+  const col = Math.floor((x - chartPan.x) / cellWidth - bbox.xMin);
+  const row = Math.floor((y - chartPan.y) / cellHeight - bbox.yMin);
+
+  // Writes GLOBAL_STATE directly rather than dispatching, so it has to mark the
+  // view dirty itself. Only the bottom bar readout reads this, so there's
+  // nothing to redraw while the pointer stays within one cell.
+  if (col === pointer[0] && row === pointer[1]) return;
+
+  GLOBAL_STATE.pointer = [col, row];
+  markDirty();
 }
 
 // function pointerCellHighlight() {
