@@ -5,6 +5,7 @@ import type { GlobalState, StateObserver } from "../types";
 
 let simDraw: (() => void) | undefined;
 let simStop: (() => void) | undefined;
+let simTerminate: (() => void) | undefined;
 let simRelax: (() => void) | undefined;
 let simIsRelaxing: (() => boolean) | undefined;
 export let fitCamera: (() => void) | undefined;
@@ -52,7 +53,12 @@ export function resetSim() {
 
 export function drawYarns(resetCamera = false) {
   if (GLOBAL_STATE.showTimeNeedleView) return;
-  if (simStop) simStop();
+  // Each simulate() owns a relaxation worker, so the previous one has to be
+  // torn down rather than just stopped.
+  if (simTerminate) simTerminate();
+  simTerminate = undefined;
+  simStop = undefined;
+  simDraw = undefined;
 
   if (!GLOBAL_STATE.machineChart || !GLOBAL_STATE.rowMap) return;
 
@@ -89,6 +95,7 @@ export function drawYarns(resetCamera = false) {
   simIsRelaxing = result.isRelaxing;
   fitCamera = result.fitCamera;
   simStop = result.stopSim;
+  simTerminate = result.terminate;
   simDraw = result.draw;
   setSimState("idle");
 }

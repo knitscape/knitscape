@@ -37,11 +37,16 @@ export function createCamera3D() {
     return projMatrix;
   }
 
-  function fit(bbox: BBox3D): void {
+  function fit(bbox: BBox3D, aspect: number = 1): void {
     target = [...bbox.center];
-    radius = Math.max(...bbox.dimensions) * 2;
-    azimuth = 0.5;
-    polar = Math.PI / 4;
+    azimuth = 0;
+    polar = Math.PI / 2;
+    const [w, h, d] = bbox.dimensions;
+    const vTan = Math.tan(FOV / 2);
+    const hTan = vTan * aspect;
+    const radiusV = h / 2 / vTan;
+    const radiusH = w / 2 / hTan;
+    radius = Math.max(radiusV, radiusH) * 1.1 + d / 2;
     update();
   }
 
@@ -49,15 +54,36 @@ export function createCamera3D() {
     if (e.button !== 0) return;
     const startAzimuth = azimuth;
     const startPolar = polar;
+    const startTarget = [...target];
     const startX = e.clientX;
     const startY = e.clientY;
+    const panning = e.shiftKey;
 
     function move(e: PointerEvent): void {
-      azimuth = startAzimuth - (e.clientX - startX) * 0.005;
-      polar = Math.max(
-        0.05,
-        Math.min(Math.PI - 0.05, startPolar - (e.clientY - startY) * 0.005)
-      );
+      if (panning) {
+        const dx = (e.clientX - startX) * radius * 0.0008;
+        const dy = (e.clientY - startY) * radius * 0.0008;
+        const sa = Math.sin(startAzimuth);
+        const ca = Math.cos(startAzimuth);
+        const sp = Math.sin(startPolar);
+        const cp = Math.cos(startPolar);
+        const rightX = ca;
+        const rightZ = -sa;
+        const upX = -sa * cp;
+        const upY = sp;
+        const upZ = -ca * cp;
+        target = [
+          startTarget[0] - rightX * dx + upX * dy,
+          startTarget[1] + upY * dy,
+          startTarget[2] - rightZ * dx + upZ * dy,
+        ];
+      } else {
+        azimuth = startAzimuth - (e.clientX - startX) * 0.005;
+        polar = Math.max(
+          0.05,
+          Math.min(Math.PI - 0.05, startPolar - (e.clientY - startY) * 0.005)
+        );
+      }
       update();
     }
 

@@ -52,3 +52,23 @@ export type ResolvedSegment = {
   targetOffset: number[];
   restLength: number;
 };
+
+// ─── Relaxation settings (live-tunable) ──────────────────────────────────────
+
+export interface RelaxSettings {
+  kYarn: number; // yarn spring stiffness
+  tYarn: number; // bending stiffness
+  iterations: number; // sub-steps per tick
+  velocityDecay: number; // 0..1 damping multiplier (0 = full damping)
+  alphaMin: number; // simulation stops when ALPHA drops below this
+  alphaTarget: number; // ALPHA decays toward this value
+}
+
+export const DEFAULT_RELAX_SETTINGS: RelaxSettings = {
+  kYarn: 0.4,
+  tYarn: 0.01,
+  iterations: 4,
+  velocityDecay: 0.5,
+  alphaMin: 0.001,
+  alphaTarget: 0,
+};

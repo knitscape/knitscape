@@ -12,13 +12,14 @@ attribute vec3 pointB;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat4 uInverseModelViewMatrix;
 uniform mat4 shadowViewMatrix;
 uniform mat4 shadowProjectionMatrix;
 uniform float uWidth;
+uniform vec3 uLightPos;
 
 varying float across;
 varying vec4 vLightNDC;
+varying float vFacing;
 
 const mat4 depthScaleMatrix = mat4(
     0.5, 0, 0, 0,
@@ -40,9 +41,12 @@ void main() {
   vec4 mvPosition = vec4(pt, currentPoint.z, 1.0);
   gl_Position = projectionMatrix * mvPosition;
 
-  vec4 undo = uInverseModelViewMatrix * mvPosition;
   across = position.y;
-  vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * modelMatrix * undo;
+  vec4 worldPoint = modelMatrix * vec4(mix(pointA, pointB, position.x), 1.0);
+  vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * worldPoint;
+
+  vec3 lightDirView = normalize((modelViewMatrix * vec4(uLightPos, 1.0)).xyz - mvPosition.xyz);
+  vFacing = lightDirView.z;
 }
 `;
 
@@ -55,6 +59,7 @@ uniform sampler2D tShadow;
 
 varying float across;
 varying vec4 vLightNDC;
+varying float vFacing;
 
 float unpackRGBA(vec4 v) {
     return dot(v, 1.0 / vec4(1.0, 255.0, 65025.0, 16581375.0));
@@ -64,10 +69,25 @@ vec3 normal = vec3(0.0, 0.0, 1.0);
 
 void main() {
     vec3 lightPos = vLightNDC.xyz / vLightNDC.w;
-    float bias = 0.0001;
+    float bias = 0.002;
     float depth = lightPos.z - bias;
-    float occluder = unpackRGBA(texture2D(tShadow, lightPos.xy));
-    float shadow = mix(0.6, 1.0, step(depth, occluder));
+    float texelSize = 1.0 / 2048.0;
+    float lit = 0.0;
+    bool inFrustum = lightPos.x >= 0.0 && lightPos.x <= 1.0
+                  && lightPos.y >= 0.0 && lightPos.y <= 1.0
+                  && lightPos.z <= 1.0;
+    if (!inFrustum) {
+        lit = 9.0;
+    } else {
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                float d = unpackRGBA(texture2D(tShadow, lightPos.xy + vec2(x, y) * texelSize));
+                lit += step(depth, d);
+            }
+        }
+    }
+    float facing = smoothstep(-0.1, 0.3, vFacing);
+    float shadow = mix(0.6, 1.0, min(lit / 9.0, facing));
 
     vec3 highlight = normalize(vec3(0.0, across * 2., 0.4));
     float outline = dot(normal, highlight);
@@ -90,12 +110,13 @@ uniform float uWidth;
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
-uniform mat4 uInverseModelViewMatrix;
 uniform mat4 shadowViewMatrix;
 uniform mat4 shadowProjectionMatrix;
+uniform vec3 uLightPos;
 
 varying float across;
 varying vec4 vLightNDC;
+varying float vFacing;
 
 const mat4 depthScaleMatrix = mat4(
     0.5, 0, 0, 0,
@@ -127,9 +148,12 @@ void main() {
 
   gl_Position = projectionMatrix * mvPosition;
 
-  vec4 undo = uInverseModelViewMatrix * mvPosition;
   across = (position.x + position.y) * 0.5 * sigma;
-  vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * modelMatrix * undo;
+  vec4 worldPoint = modelMatrix * vec4(pointB, 1.0);
+  vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * worldPoint;
+
+  vec3 lightDirView = normalize((modelViewMatrix * vec4(uLightPos, 1.0)).xyz - mvPosition.xyz);
+  vFacing = lightDirView.z;
 }
 `;
 
@@ -220,6 +244,7 @@ let lastBbox: any;
 let segmentProgram: any, joinProgram: any, segmentDepthProgram: any, joinDepthProgram: any;
 let shadowFB: any, shadowTexture: any;
 let shadowViewMatrix: any, shadowProjectionMatrix: any;
+let lightWorldPos: number[] = [0, 0, 25];
 
 // Segment instance geometry VAO (shared, non-instanced part)
 let segmentGeoBuffer: any, joinGeoBuffer: any;
@@ -365,16 +390,48 @@ function buildJoinDepthVAO(yarnBuffer: any) {
 
 function computeLightMatrices(bbox: any) {
   const lightPos = [bbox.xMin, bbox.yMax, 25];
+  lightWorldPos = lightPos;
   const lightTarget = bbox.center;
   const lightCameraMatrix = Mat4.lookAt(lightPos, lightTarget, [0, 1, 0]);
   shadowViewMatrix = Mat4.inverse(lightCameraMatrix);
+
+  // Fit the ortho frustum tightly around the scene bbox in light space, so
+  // the shadow map's 2048² texels are spent entirely on visible geometry.
+  const corners = [
+    [bbox.xMin, bbox.yMin, bbox.zMin, 1],
+    [bbox.xMax, bbox.yMin, bbox.zMin, 1],
+    [bbox.xMin, bbox.yMax, bbox.zMin, 1],
+    [bbox.xMax, bbox.yMax, bbox.zMin, 1],
+    [bbox.xMin, bbox.yMin, bbox.zMax, 1],
+    [bbox.xMax, bbox.yMin, bbox.zMax, 1],
+    [bbox.xMin, bbox.yMax, bbox.zMax, 1],
+    [bbox.xMax, bbox.yMax, bbox.zMax, 1],
+  ];
+
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+  for (const c of corners) {
+    const v = Mat4.transformVector(shadowViewMatrix, c);
+    if (v[0] < minX) minX = v[0];
+    if (v[0] > maxX) maxX = v[0];
+    if (v[1] < minY) minY = v[1];
+    if (v[1] > maxY) maxY = v[1];
+    if (v[2] < minZ) minZ = v[2];
+    if (v[2] > maxZ) maxZ = v[2];
+  }
+
+  const padX = (maxX - minX) * 0.05;
+  const padY = (maxY - minY) * 0.05;
+  const padZ = (maxZ - minZ) * 0.05;
+
   shadowProjectionMatrix = Mat4.orthographic(
-    -bbox.dimensions[0],
-    bbox.dimensions[0],
-    -bbox.dimensions[1],
-    bbox.dimensions[1],
-    0.1,
-    100
+    minX - padX,
+    maxX + padX,
+    minY - padY,
+    maxY + padY,
+    -maxZ - padZ,
+    -minZ + padZ
   );
 }
 
@@ -408,7 +465,8 @@ function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
   }
 
   lastBbox = bbox3d(yarnData[0].pts);
-  if (resetCamera) camera.fit(lastBbox);
+  if (resetCamera)
+    camera.fit(lastBbox, canvas.clientWidth / canvas.clientHeight);
   computeLightMatrices(lastBbox);
 
   yarns = [];
@@ -439,17 +497,17 @@ function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
   });
 }
 
-function setMainUniforms(program: any, viewMatrix: any, projMatrix: any, inverseViewMatrix: any, color: any, diameter: any) {
+function setMainUniforms(program: any, viewMatrix: any, projMatrix: any, color: any, diameter: any) {
   const u = program.uniformLocations;
   gl.useProgram(program.program);
   gl.uniformMatrix4fv(u.modelMatrix, false, IDENTITY);
   gl.uniformMatrix4fv(u.modelViewMatrix, false, viewMatrix);
   gl.uniformMatrix4fv(u.projectionMatrix, false, projMatrix);
-  gl.uniformMatrix4fv(u.uInverseModelViewMatrix, false, inverseViewMatrix);
   gl.uniformMatrix4fv(u.shadowViewMatrix, false, shadowViewMatrix);
   gl.uniformMatrix4fv(u.shadowProjectionMatrix, false, shadowProjectionMatrix);
   gl.uniform1f(u.uWidth, diameter);
   gl.uniform3fv(u.uColor, color);
+  gl.uniform3fv(u.uLightPos, lightWorldPos);
 }
 
 function setDepthUniforms(program: any, viewMatrix: any, projMatrix: any, diameter: any) {
@@ -468,7 +526,6 @@ function draw() {
   const aspect = canvas.clientWidth / canvas.clientHeight;
   const projMatrix = camera.projection(aspect);
   const viewMatrix = camera.viewMatrix;
-  const inverseViewMatrix = Mat4.inverse(viewMatrix);
 
   // Shadow pass — render depth into shadowFB
   gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
@@ -476,6 +533,8 @@ function draw() {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.CULL_FACE);
+  gl.enable(gl.POLYGON_OFFSET_FILL);
+  gl.polygonOffset(4.0, 8.0);
 
   for (const yarn of yarns) {
     setDepthUniforms(segmentDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
@@ -486,6 +545,8 @@ function draw() {
     gl.bindVertexArray(yarn.joinDepthVAO);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
   }
+
+  gl.disable(gl.POLYGON_OFFSET_FILL);
 
   // Main pass
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -498,12 +559,12 @@ function draw() {
   gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
 
   for (const yarn of yarns) {
-    setMainUniforms(segmentProgram, viewMatrix, projMatrix, inverseViewMatrix, yarn.color, yarn.diameter);
+    setMainUniforms(segmentProgram, viewMatrix, projMatrix, yarn.color, yarn.diameter);
     gl.uniform1i(segmentProgram.uniformLocations.tShadow, 0);
     gl.bindVertexArray(yarn.segmentVAO);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, yarn.segmentCount);
 
-    setMainUniforms(joinProgram, viewMatrix, projMatrix, inverseViewMatrix, yarn.color, yarn.diameter);
+    setMainUniforms(joinProgram, viewMatrix, projMatrix, yarn.color, yarn.diameter);
     gl.uniform1i(joinProgram.uniformLocations.tShadow, 0);
     gl.bindVertexArray(yarn.joinVAO);
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
@@ -523,7 +584,10 @@ function updateYarnGeometry(yarnData: any) {
 }
 
 function fitCamera() {
-  if (camera && lastBbox) camera.fit(lastBbox);
+  if (camera && lastBbox) {
+    const canvas = gl.canvas as HTMLCanvasElement;
+    camera.fit(lastBbox, canvas.clientWidth / canvas.clientHeight);
+  }
 }
 
 export const noodleRenderer = {

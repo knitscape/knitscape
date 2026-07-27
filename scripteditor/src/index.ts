@@ -28,6 +28,7 @@ let lastResult: ScriptResult | null = null;
 // Simulation handles
 let simDraw: (() => void) | undefined;
 let simStop: (() => void) | undefined;
+let simTerminate: (() => void) | undefined;
 let simRelax: (() => void) | undefined;
 let simIsRelaxing: (() => boolean) | undefined;
 let simGetTickMs: (() => number) | undefined;
@@ -70,8 +71,11 @@ function renderChart() {
 function initSimulation(resetCamera = true) {
   if (!lastResult) return;
 
-  if (simStop) {
-    simStop();
+  // Each simulate() owns a relaxation worker, so the previous one has to be
+  // torn down rather than just stopped.
+  if (simTerminate) {
+    simTerminate();
+    simTerminate = undefined;
     simStop = undefined;
     simDraw = undefined;
     simRelax = undefined;
@@ -96,6 +100,7 @@ function initSimulation(resetCamera = true) {
 
   simDraw = result.draw;
   simStop = result.stopSim;
+  simTerminate = result.terminate;
   simRelax = result.relax;
   simIsRelaxing = result.isRelaxing;
   simGetTickMs = result.getTickMs;
