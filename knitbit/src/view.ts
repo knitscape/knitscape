@@ -6,6 +6,8 @@ import type { LayoutMode, RelaxSettings } from "./simulation/types";
 import { SYMBOL_DATA } from "@shared/opData";
 import { Bimp } from "@shared/Bimp";
 import type { SavedScript } from "./scripts";
+import type { FiberStyle } from "@shared/simulation/fiber";
+import type { AOSettings } from "@shared/simulation/ambientOcclusion";
 
 export type ScriptId =
   | { type: "saved"; name: string }
@@ -51,6 +53,17 @@ export interface AppState {
   simShowSettings: boolean;
   simAlpha: number;
   simMaximized: boolean;
+  fiberMode: boolean;
+  fiberStyle: FiberStyle;
+  stitchShape: StitchShape;
+  ao: AOSettings;
+}
+
+export interface StitchShape {
+  /** Yarn diameter, in stitch widths. */
+  yarnDiameter: number;
+  /** Stitch height over stitch width. */
+  stitchAspect: number;
 }
 
 export interface ViewHandlers {
@@ -90,6 +103,13 @@ export interface ViewHandlers {
   onDownloadScript: () => void;
   onToggleSimSettings: () => void;
   onToggleSimMaximized: () => void;
+  onToggleFiberMode: () => void;
+  onFiberStyleChange: (key: keyof FiberStyle, value: number) => void;
+  onResetFiberStyle: () => void;
+  onStitchShapeChange: (key: keyof StitchShape, value: number) => void;
+  onResetStitchShape: () => void;
+  onAOChange: (settings: Partial<AOSettings>) => void;
+  onResetAO: () => void;
   onRelaxSettingChange: <K extends keyof RelaxSettings>(
     key: K,
     value: RelaxSettings[K]
@@ -387,6 +407,16 @@ export function view(state: AppState, handlers: ViewHandlers) {
                 </button>
               </div>
               <button
+                class="flex items-center gap-[0.3rem] h-[1.5rem] px-[0.5rem] text-[0.72rem] rounded-[3px] cursor-pointer [transition:background_80ms,color_80ms] ${state.fiberMode
+                  ? "bg-[var(--accent)] text-white border-0 hover:brightness-110"
+                  : "bg-[var(--base2)] border border-[color:var(--base4)] text-[color:var(--base10)] hover:bg-[var(--base4)] hover:text-[color:var(--base13)]"}"
+                title=${state.fiberMode
+                  ? "Fiber yarn is ON \u2014 click for the flat toon yarn"
+                  : "Draw the yarn at fiber level: plies, fibers and fuzz"}
+                @click=${handlers.onToggleFiberMode}>
+                <i class="fa-solid fa-feather"></i> Fiber
+              </button>
+              <button
                 class="flex items-center justify-center w-[1.5rem] h-[1.5rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.75rem] rounded-[3px] text-[color:var(--base12)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
                 title="Fit view"
                 @click=${handlers.onFitCamera}>
@@ -439,8 +469,8 @@ export function view(state: AppState, handlers: ViewHandlers) {
   `;
 }
 
-interface SliderConfig {
-  key: keyof RelaxSettings;
+interface SliderConfig<K extends string = keyof RelaxSettings> {
+  key: K;
   label: string;
   min: number;
   max: number;
@@ -491,12 +521,102 @@ const RELAX_SLIDERS: SliderConfig[] = [
   },
 ];
 
+// Stitch shape; changing either rebuilds the simulation.
+const STITCH_SLIDERS: SliderConfig<keyof StitchShape>[] = [
+  { key: "yarnDiameter", label: "yarn diameter (stitch widths)", min: 0.1, max: 0.6, step: 0.01, format: (v) => v.toFixed(2) },
+  { key: "stitchAspect", label: "stitch aspect (height / width)", min: 0.4, max: 1.6, step: 0.01, format: (v) => v.toFixed(2) },
+];
+
+// Screen-space ambient occlusion, over either yarn renderer.
+const AO_SLIDERS: SliderConfig<"radius" | "strength">[] = [
+  { key: "radius", label: "occlusion reach (stitch widths)", min: 0.05, max: 2, step: 0.01, format: (v) => v.toFixed(2) },
+  { key: "strength", label: "occlusion strength", min: 0, max: 4, step: 0.05, format: (v) => v.toFixed(2) },
+];
+
+// Fiber-yarn settings, in groups. See fiberStyle in shared/simulation/fiber.ts.
+const FIBER_SLIDERS: { title: string; sliders: SliderConfig<keyof FiberStyle>[] }[] = [
+  {
+    title: "Plies & fibers",
+    sliders: [
+      { key: "plies", label: "plies", min: 1, max: 6, step: 1, format: (v) => v.toFixed(0) },
+      { key: "plyPitch", label: "ply twist length (diameters)", min: 1, max: 10, step: 0.1, format: (v) => v.toFixed(1) },
+      { key: "fiberCount", label: "fibers per ply", min: 4, max: 64, step: 1, format: (v) => v.toFixed(0) },
+      { key: "fiberAngle", label: "fiber angle (°)", min: -60, max: 60, step: 1, format: (v) => v.toFixed(0) },
+      { key: "fiberBump", label: "fiber roundness", min: 0, max: 1, step: 0.01, format: (v) => v.toFixed(2) },
+      { key: "fiberLength", label: "fiber length (diameters)", min: 0.5, max: 12, step: 0.1, format: (v) => v.toFixed(1) },
+    ],
+  },
+  {
+    title: "Fuzz",
+    sliders: [
+      { key: "fuzz", label: "flyaways per diameter", min: 0, max: 60, step: 1, format: (v) => v.toFixed(0) },
+      { key: "hairLength", label: "longest flyaway (diameters)", min: 0.1, max: 3, step: 0.05, format: (v) => v.toFixed(2) },
+      { key: "loopShare", label: "share that are loops", min: 0, max: 1, step: 0.01, format: (v) => v.toFixed(2) },
+      { key: "hairCurl", label: "crimp", min: 0, max: 2, step: 0.05, format: (v) => v.toFixed(2) },
+      { key: "hairWidth", label: "fiber width (radii)", min: 0.005, max: 0.1, step: 0.005, format: (v) => v.toFixed(3) },
+    ],
+  },
+  {
+    title: "Light",
+    sliders: [
+      { key: "key", label: "key light", min: 0, max: 2, step: 0.01, format: (v) => v.toFixed(2) },
+      { key: "ambient", label: "ambient", min: 0, max: 1, step: 0.01, format: (v) => v.toFixed(2) },
+      { key: "fill", label: "fill", min: 0, max: 1, step: 0.01, format: (v) => v.toFixed(2) },
+      { key: "sheen", label: "sheen", min: 0, max: 1, step: 0.01, format: (v) => v.toFixed(2) },
+    ],
+  },
+  {
+    title: "Sampling",
+    sliders: [
+      { key: "spacing", label: "sample spacing (radii)", min: 0.3, max: 2, step: 0.05, format: (v) => v.toFixed(2) },
+    ],
+  },
+];
+
+function slider<K extends string>(s: SliderConfig<K>, value: number, onInput: (key: K, v: number) => void) {
+  return html`
+    <label class="flex flex-col gap-[0.2rem]">
+      <div class="flex items-baseline justify-between text-[0.7rem] text-[color:var(--base11)]">
+        <span>${s.label}</span>
+        <span class="font-mono text-[color:var(--base12)]">${s.format(value)}</span>
+      </div>
+      <input
+        type="range"
+        min=${s.min}
+        max=${s.max}
+        step=${s.step}
+        .value=${String(value)}
+        class="w-full accent-[var(--accent)]"
+        @input=${(e: Event) => onInput(s.key, parseFloat((e.target as HTMLInputElement).value))} />
+    </label>
+  `;
+}
+
+function sectionHeader(title: string, onReset?: () => void) {
+  return html`
+    <div class="flex items-center justify-between gap-2">
+      <span
+        class="text-[0.65rem] [font-variation-settings:'wght'_600] tracking-[0.08em] uppercase text-[color:var(--base8)]">
+        ${title}
+      </span>
+      ${onReset
+        ? html`<button
+            class="flex items-center justify-center h-[1.3rem] px-[0.4rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.62rem] rounded-[3px] text-[color:var(--base11)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
+            title="Reset to defaults"
+            @click=${onReset}>
+            reset
+          </button>`
+        : ""}
+    </div>
+  `;
+}
+
 function simSettingsPanel(state: AppState, handlers: ViewHandlers) {
   if (!state.simShowSettings) {
     return html`
       <button
         class="absolute top-2 right-2 flex items-center justify-center w-[1.75rem] h-[1.75rem] bg-[var(--base2)]/90 backdrop-blur border border-[color:var(--base4)] text-[0.8rem] rounded-[3px] text-[color:var(--base12)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
-        title="Simulation settings"
+        title="Settings"
         @click=${handlers.onToggleSimSettings}>
         <i class="fa-solid fa-gear"></i>
       </button>
@@ -505,54 +625,57 @@ function simSettingsPanel(state: AppState, handlers: ViewHandlers) {
 
   return html`
     <div
-      class="absolute top-2 right-2 w-[16rem] bg-[var(--base1)]/95 backdrop-blur border border-[color:var(--base3)] rounded-[4px] shadow-xl flex flex-col">
+      class="absolute top-2 right-2 w-[16rem] max-h-[calc(100%-1rem)] bg-[var(--base1)]/95 backdrop-blur border border-[color:var(--base3)] rounded-[4px] shadow-xl flex flex-col">
       <div
-        class="flex items-center justify-between gap-2 py-[0.4rem] px-3 [border-bottom:1px_solid_var(--base3)]">
+        class="shrink-0 flex items-center justify-between gap-2 py-[0.4rem] px-3 [border-bottom:1px_solid_var(--base3)]">
         <span
           class="text-[0.7rem] [font-variation-settings:'wght'_600] tracking-[0.08em] uppercase text-[color:var(--base10)]">
-          Simulation
+          Settings
         </span>
-        <div class="flex items-center gap-1">
-          <button
-            class="flex items-center justify-center h-[1.4rem] px-[0.4rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.65rem] rounded-[3px] text-[color:var(--base11)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
-            title="Reset to defaults"
-            @click=${handlers.onResetRelaxSettings}>
-            reset
-          </button>
-          <button
-            class="flex items-center justify-center w-[1.4rem] h-[1.4rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.7rem] rounded-[3px] text-[color:var(--base12)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
-            title="Close"
-            @click=${handlers.onToggleSimSettings}>
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
+        <button
+          class="flex items-center justify-center w-[1.4rem] h-[1.4rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.7rem] rounded-[3px] text-[color:var(--base12)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
+          title="Close"
+          @click=${handlers.onToggleSimSettings}>
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <div class="flex flex-col gap-[0.55rem] py-3 px-3">
-        ${RELAX_SLIDERS.map((s) => {
-          const value = state.relaxSettings[s.key];
-          return html`
-            <label class="flex flex-col gap-[0.2rem]">
-              <div
-                class="flex items-baseline justify-between text-[0.7rem] text-[color:var(--base11)]">
-                <span>${s.label}</span>
-                <span class="font-mono text-[color:var(--base12)]"
-                  >${s.format(value)}</span
-                >
-              </div>
-              <input
-                type="range"
-                min=${s.min}
-                max=${s.max}
-                step=${s.step}
-                .value=${String(value)}
-                class="w-full accent-[var(--accent)]"
-                @input=${(e: Event) => {
-                  const v = parseFloat((e.target as HTMLInputElement).value);
-                  handlers.onRelaxSettingChange(s.key, v);
-                }} />
-            </label>
-          `;
-        })}
+      <div class="min-h-0 overflow-y-auto flex flex-col gap-[0.55rem] py-3 px-3">
+        ${sectionHeader("Stitch", handlers.onResetStitchShape)}
+        ${STITCH_SLIDERS.map((s) =>
+          slider(s, state.stitchShape[s.key], (key, v) => handlers.onStitchShapeChange(key, v))
+        )}
+        <div class="mt-2 [border-top:1px_solid_var(--base3)]"></div>
+        ${sectionHeader("Relaxation", handlers.onResetRelaxSettings)}
+        ${RELAX_SLIDERS.map((s) =>
+          slider(s, state.relaxSettings[s.key], (key, v) => handlers.onRelaxSettingChange(key, v))
+        )}
+        <div class="mt-2 [border-top:1px_solid_var(--base3)]"></div>
+        ${sectionHeader("Shading", handlers.onResetAO)}
+        <label class="flex items-center justify-between gap-2 text-[0.7rem] text-[color:var(--base11)] cursor-pointer"
+          title="Darken yarn where other yarn crowds it (screen-space, GTAO), whatever the light.">
+          <span>ambient occlusion</span>
+          <input
+            type="checkbox"
+            class="accent-[var(--accent)]"
+            .checked=${state.ao.enabled}
+            @change=${(e: Event) => handlers.onAOChange({ enabled: (e.target as HTMLInputElement).checked })} />
+        </label>
+        ${AO_SLIDERS.map((s) => slider(s, state.ao[s.key], (key, v) => handlers.onAOChange({ [key]: v })))}
+        <div class="mt-2 [border-top:1px_solid_var(--base3)]"></div>
+        ${sectionHeader("Fiber yarn", handlers.onResetFiberStyle)}
+        ${state.fiberMode
+          ? ""
+          : html`<p class="text-[0.68rem] text-[color:var(--base8)] italic">
+              Turn on Fiber in the preview header to see these.
+            </p>`}
+        ${FIBER_SLIDERS.map(
+          (group) => html`
+            <span class="mt-1 text-[0.65rem] text-[color:var(--base9)]">${group.title}</span>
+            ${group.sliders.map((s) =>
+              slider(s, state.fiberStyle[s.key], (key, v) => handlers.onFiberStyleChange(key, v))
+            )}
+          `
+        )}
       </div>
     </div>
   `;

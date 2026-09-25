@@ -2,6 +2,8 @@ import { buildYarnCurve } from "./spline";
 import { bbox3d, initShaderProgram, resizeCanvasToDisplaySize } from "./webgl";
 import { createCamera3D } from "./camera";
 import { Mat4 } from "../mat4";
+import { createFiberRenderer, fiberStyle, type FiberRenderer, type FiberStyle } from "./fiber";
+import { createAmbientOcclusion, DEFAULT_AO, type AmbientOcclusion, type AOSettings } from "./ambientOcclusion";
 
 const segmentVertexShader = /* glsl */ `
 precision highp float;
@@ -295,6 +297,62 @@ let segmentGeoBuffer: any, joinGeoBuffer: any;
 // Per-yarn data
 let yarns: any[] = [];
 
+// Fibre-level drawing (fiber.ts), in place of the toon strips when on. Its
+// yarns are rebuilt from the toon centerlines whenever those were replaced or
+// moved while it was off.
+let fiberMode = false;
+let fiber: FiberRenderer | null = null;
+let fiberStale = true;
+// Rebuilding the fibre frames of a whole garment takes a while, so while the
+// yarn is moving they catch up at most a third of the time; the latest
+// position is always drawn once it stops.
+let fiberMoved = false;
+let fiberUpdateMs = 0;
+let fiberUpdatedAt = 0;
+
+// Screen-space ambient occlusion over either renderer (ambientOcclusion.ts).
+let ao: AmbientOcclusion | null = null;
+const aoSettings: AOSettings = { ...DEFAULT_AO };
+
+function setAmbientOcclusion(settings: Partial<AOSettings>) {
+  Object.assign(aoSettings, settings);
+}
+
+function setFiberMode(on: boolean) {
+  fiberMode = on;
+}
+
+/** Change fibre settings; they show on the next frame. */
+function setFiberStyle(style: Partial<FiberStyle>) {
+  // The sample spacing is baked into each yarn's frames when it is built.
+  if (style.spacing !== undefined && style.spacing !== fiberStyle.spacing) fiberStale = true;
+  Object.assign(fiberStyle, style);
+}
+
+function fiberFrame(viewMatrix: any, projMatrix: any) {
+  if (!fiber) fiber = createFiberRenderer(gl);
+  if (fiberStale) {
+    fiber.setYarns(
+      yarns.map((yarn) => ({ dense: yarn.splinePts, radius: yarn.diameter / 2, color: yarn.color }))
+    );
+    fiberStale = false;
+    fiberMoved = false;
+  } else if (fiberMoved && performance.now() - fiberUpdatedAt >= 2 * fiberUpdateMs) {
+    const start = performance.now();
+    fiber.update(yarns.map((yarn) => yarn.splinePts));
+    fiberUpdatedAt = performance.now();
+    fiberUpdateMs = fiberUpdatedAt - start;
+    fiberMoved = false;
+  }
+  return {
+    viewMatrix,
+    projMatrix,
+    shadowViewMatrix,
+    shadowProjectionMatrix,
+    lightDir: LIGHT_DIR,
+  };
+}
+
 function setupShadowFramebuffer() {
   shadowTexture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
@@ -491,6 +549,8 @@ function computeLightMatrices(bbox: any) {
 function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
   if (!gl || gl.canvas !== canvas) {
     gl = canvas.getContext("webgl2") as WebGL2RenderingContext;
+    fiber = null;
+    ao = null;
     if (!gl) {
       console.error("Unable to create WebGL2 context");
       return;
@@ -523,6 +583,7 @@ function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
   computeLightMatrices(lastBbox);
 
   yarns = [];
+  fiberStale = true;
 
   yarnData.forEach((yarn: any) => {
     if (yarn.pts.length < 6) return;
@@ -590,20 +651,28 @@ function draw() {
   gl.enable(gl.POLYGON_OFFSET_FILL);
   gl.polygonOffset(4.0, 8.0);
 
-  for (const yarn of yarns) {
-    setDepthUniforms(segmentDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
-    gl.bindVertexArray(yarn.segmentDepthVAO);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, yarn.segmentCount);
+  const frame = fiberMode ? fiberFrame(viewMatrix, projMatrix) : null;
+  if (frame) {
+    fiber!.drawDepth(frame);
+  } else {
+    for (const yarn of yarns) {
+      setDepthUniforms(segmentDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
+      gl.bindVertexArray(yarn.segmentDepthVAO);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, yarn.segmentCount);
 
-    setDepthUniforms(joinDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
-    gl.bindVertexArray(yarn.joinDepthVAO);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
+      setDepthUniforms(joinDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
+      gl.bindVertexArray(yarn.joinDepthVAO);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
+    }
   }
 
   gl.disable(gl.POLYGON_OFFSET_FILL);
 
-  // Main pass
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  // Main pass, into the occlusion's target when it is on.
+  if (!ao) ao = createAmbientOcclusion(gl);
+  Object.assign(ao.settings, aoSettings);
+  const occluded = ao.begin(window.devicePixelRatio || 1);
+  if (!occluded) gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
@@ -612,6 +681,13 @@ function draw() {
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
 
+  if (frame) fiber!.draw(frame);
+  else drawToon(viewMatrix, projMatrix);
+
+  if (occluded) ao.finish(projMatrix);
+}
+
+function drawToon(viewMatrix: any, projMatrix: any) {
   for (const yarn of yarns) {
     setMainUniforms(segmentProgram, viewMatrix, projMatrix, yarn.color, yarn.diameter);
     gl.uniform1i(segmentProgram.uniformLocations.tShadow, 0);
@@ -635,6 +711,8 @@ function updateYarnGeometry(yarnData: any) {
     gl.bindBuffer(gl.ARRAY_BUFFER, yarns[i].yarnBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, yarns[i].splinePts);
   });
+  if (fiberMode && fiber && !fiberStale) fiberMoved = true;
+  else fiberStale = true;
 }
 
 function fitCamera() {
@@ -649,4 +727,7 @@ export const noodleRenderer = {
   init,
   updateYarnGeometry,
   fitCamera,
+  setFiberMode,
+  setFiberStyle,
+  setAmbientOcclusion,
 };

@@ -7,6 +7,8 @@ import {
   type YarnSegments,
 } from "./types";
 import type { WorkerCommand, WorkerTick } from "./relaxation.worker";
+import type { FiberStyle } from "./fiber";
+import type { AOSettings } from "./ambientOcclusion";
 
 const renderer = noodleRenderer;
 
@@ -163,5 +165,8 @@ export function createRelaxationDriver(
     getTickMs: () => lastTickMs,
     getAlpha: () => currentAlpha,
     fitCamera: () => renderer.fitCamera(),
+    setFiberMode: (on: boolean) => renderer.setFiberMode(on),
+    setFiberStyle: (style: Partial<FiberStyle>) => renderer.setFiberStyle(style),
+    setAmbientOcclusion: (settings: Partial<AOSettings>) => renderer.setAmbientOcclusion(settings),
   };
 }

@@ -8,11 +8,13 @@ import {
   encodeControlJson,
   triggerDownload,
 } from "./download";
-import { simulate } from "./simulation/simulate";
+import { simulate, DEFAULT_YARN_DIAMETER, DEFAULT_STITCH_ASPECT } from "./simulation/simulate";
+import { DEFAULT_FIBER_STYLE, type FiberStyle } from "@shared/simulation/fiber";
+import { DEFAULT_AO, type AOSettings } from "@shared/simulation/ambientOcclusion";
 import { countStitches } from "./simulation/topology";
 import { runScript } from "./execute";
 import { Bimp } from "@shared/Bimp";
-import { view, type AppState, type ViewHandlers, type BimpTool } from "./view";
+import { view, type AppState, type ViewHandlers, type BimpTool, type StitchShape } from "./view";
 import {
   loadAllScripts,
   getScript,
@@ -38,6 +40,10 @@ import {
 } from "./simulation/types";
 
 const MIN_CELL = 6;
+const FIBER_KEY = "knitbit:fiberMode";
+const FIBER_STYLE_KEY = "knitbit:fiberStyle";
+const STITCH_KEY = "knitbit:stitchShape";
+const AO_KEY = "knitbit:ambientOcclusion";
 const MAX_CELL = 80;
 
 let state: AppState = {
@@ -62,7 +68,99 @@ let state: AppState = {
   simShowSettings: false,
   simAlpha: 1,
   simMaximized: false,
+  fiberMode: loadFiberMode(),
+  fiberStyle: loadFiberStyle(),
+  stitchShape: loadStitchShape(),
+  ao: loadAO(),
 };
+
+// Fiber settings, remembered across visits. Only known keys with number
+// values are taken, so a stale or hand-edited entry can't break rendering.
+function loadFiberStyle(): FiberStyle {
+  const style: FiberStyle = { ...DEFAULT_FIBER_STYLE };
+  try {
+    const saved = JSON.parse(localStorage.getItem(FIBER_STYLE_KEY) ?? "{}");
+    for (const key of Object.keys(style) as (keyof FiberStyle)[]) {
+      if (typeof saved?.[key] === "number" && Number.isFinite(saved[key])) style[key] = saved[key];
+    }
+  } catch {
+    // Unreadable: defaults.
+  }
+  return style;
+}
+
+function saveFiberStyle(style: FiberStyle) {
+  try {
+    localStorage.setItem(FIBER_STYLE_KEY, JSON.stringify(style));
+  } catch {
+    // Storage unavailable: it just won't be remembered.
+  }
+}
+
+// Ambient occlusion settings, remembered across visits.
+function loadAO(): AOSettings {
+  const ao: AOSettings = { ...DEFAULT_AO };
+  try {
+    const saved = JSON.parse(localStorage.getItem(AO_KEY) ?? "{}");
+    if (typeof saved?.enabled === "boolean") ao.enabled = saved.enabled;
+    if (typeof saved?.radius === "number" && saved.radius > 0) ao.radius = saved.radius;
+    if (typeof saved?.strength === "number" && saved.strength >= 0) ao.strength = saved.strength;
+  } catch {
+    // Unreadable: defaults.
+  }
+  return ao;
+}
+
+function setAO(ao: AOSettings) {
+  setState({ ao });
+  simSetAmbientOcclusion?.(ao);
+  try {
+    localStorage.setItem(AO_KEY, JSON.stringify(ao));
+  } catch {
+    // Storage unavailable: it just won't be remembered.
+  }
+}
+
+// Yarn diameter and stitch aspect, remembered across visits.
+function defaultStitchShape(): StitchShape {
+  return { yarnDiameter: DEFAULT_YARN_DIAMETER, stitchAspect: DEFAULT_STITCH_ASPECT };
+}
+
+function loadStitchShape(): StitchShape {
+  const shape = defaultStitchShape();
+  try {
+    const saved = JSON.parse(localStorage.getItem(STITCH_KEY) ?? "{}");
+    for (const key of Object.keys(shape) as (keyof StitchShape)[]) {
+      if (typeof saved?.[key] === "number" && saved[key] > 0) shape[key] = saved[key];
+    }
+  } catch {
+    // Unreadable: defaults.
+  }
+  return shape;
+}
+
+// Changing the stitch shape rebuilds the simulation, which takes a moment on a
+// big piece, so it waits for the slider to rest.
+let stitchRebuildTimer: ReturnType<typeof setTimeout> | undefined;
+function setStitchShape(shape: StitchShape) {
+  setState({ stitchShape: shape });
+  try {
+    localStorage.setItem(STITCH_KEY, JSON.stringify(shape));
+  } catch {
+    // Storage unavailable: it just won't be remembered.
+  }
+  clearTimeout(stitchRebuildTimer);
+  stitchRebuildTimer = setTimeout(() => initSimulation(false), 200);
+}
+
+// Whether the preview draws yarn at fibre level, remembered across visits.
+function loadFiberMode(): boolean {
+  try {
+    return localStorage.getItem(FIBER_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 let lastProgram: KnittingProgram | null = null;
 
@@ -79,6 +177,9 @@ let simFitCamera: (() => void) | undefined;
 let simSetMaxStitch: ((n: number) => void) | undefined;
 let simUpdateSettings: ((partial: Partial<RelaxSettings>) => void) | undefined;
 let simTerminate: (() => void) | undefined;
+let simSetFiberMode: ((on: boolean) => void) | undefined;
+let simSetFiberStyle: ((style: Partial<FiberStyle>) => void) | undefined;
+let simSetAmbientOcclusion: ((settings: Partial<AOSettings>) => void) | undefined;
 
 let needsRender = true;
 
@@ -226,7 +327,8 @@ function initSimulation(resetCamera = true) {
 
   const result = simulate(lastProgram, {
     canvas: simCanvas,
-    cellAspect: 1,
+    cellAspect: state.stitchShape.stitchAspect,
+    yarnDiameter: state.stitchShape.yarnDiameter,
     resetCamera,
     layoutMode: state.layoutMode,
     maxStitch: state.maxStitch,
@@ -243,6 +345,12 @@ function initSimulation(resetCamera = true) {
   simSetMaxStitch = result.setMaxStitch;
   simUpdateSettings = result.updateSettings;
   simTerminate = result.terminate;
+  simSetFiberMode = result.setFiberMode;
+  simSetFiberStyle = result.setFiberStyle;
+  simSetFiberStyle(state.fiberStyle);
+  simSetAmbientOcclusion = result.setAmbientOcclusion;
+  simSetAmbientOcclusion(state.ao);
+  simSetFiberMode(state.fiberMode);
   setState({ simState: "idle", topologyMs: result.topologyMs, tickMs: 0 });
 }
 
@@ -660,6 +768,32 @@ const handlers: ViewHandlers = {
   onToggleSimSettings: () =>
     setState({ simShowSettings: !state.simShowSettings }),
   onToggleSimMaximized: () => setState({ simMaximized: !state.simMaximized }),
+  onToggleFiberMode: () => {
+    const next = !state.fiberMode;
+    setState({ fiberMode: next });
+    simSetFiberMode?.(next);
+    try {
+      localStorage.setItem(FIBER_KEY, next ? "1" : "0");
+    } catch {
+      // Storage unavailable: it just won't be remembered.
+    }
+  },
+  onAOChange: (settings) => setAO({ ...state.ao, ...settings }),
+  onResetAO: () => setAO({ ...DEFAULT_AO }),
+  onStitchShapeChange: (key, value) => setStitchShape({ ...state.stitchShape, [key]: value }),
+  onResetStitchShape: () => setStitchShape(defaultStitchShape()),
+  onFiberStyleChange: (key, value) => {
+    const style = { ...state.fiberStyle, [key]: value };
+    setState({ fiberStyle: style });
+    simSetFiberStyle?.({ [key]: value });
+    saveFiberStyle(style);
+  },
+  onResetFiberStyle: () => {
+    const style = { ...DEFAULT_FIBER_STYLE };
+    setState({ fiberStyle: style });
+    simSetFiberStyle?.(style);
+    saveFiberStyle(style);
+  },
   onRelaxSettingChange: (key, value) => {
     (liveRelaxSettings[key] as number) = value as number;
     setState({ relaxSettings: { ...liveRelaxSettings } });

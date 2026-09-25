@@ -35,6 +35,9 @@ export interface TopologyNode {
   isLeg: boolean; // leg node (lower) vs head node (upper)
   stackIndex: number; // position in z-stack (0 = deepest)
   stackSize: number; // total items in stack at this grid position
+  // Depth hint for loops that crossed others in a racked transfer (cables):
+  // +1 passed over, -1 passed under, 0 no crossing.
+  layer: number;
 }
 
 export interface TopologyResult {

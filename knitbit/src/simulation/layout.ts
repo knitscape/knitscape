@@ -70,7 +70,11 @@ export function layoutNodes(
       const needle = Math.floor(topo.gridI / 2);
       const op = program.ops.pixel(needle, topo.row);
       const isKnit = op === Op.FKNIT || op === Op.BKNIT;
-      const z = isKnit ? (topo.bed === "front" ? BED_OFFSET : -BED_OFFSET) : 0;
+      // Cable crosses: nudge loops that passed over/under others apart by
+      // about a yarn diameter so the crossing reads (and relaxes) correctly.
+      const z =
+        (isKnit ? (topo.bed === "front" ? BED_OFFSET : -BED_OFFSET) : 0) +
+        topo.layer * 2 * YARN_RADIUS;
       const numContacts = topo.stackSize;
       const offset = Math.sqrt(
         (numContacts * YARN_RADIUS * YARN_RADIUS) / 2

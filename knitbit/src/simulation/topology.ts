@@ -60,7 +60,7 @@ export function generateTopology(
     stackAt.set(key, stackIndex + 1);
 
     const idx = nodes.length;
-    nodes.push({ gridI, gridJ, row, bed, isLeg, stackIndex, stackSize: -1 });
+    nodes.push({ gridI, gridJ, row, bed, isLeg, stackIndex, stackSize: -1, layer: 0 });
     return idx;
   }
 
@@ -106,11 +106,15 @@ export function generateTopology(
     front: new Array<boolean>(width).fill(false),
     back: new Array<boolean>(width).fill(false),
   };
+  // Front needles that received a loop from a racked back→front transfer
+  // in the current run of transfer rows (used to layer cable crosses).
+  let placedThisBlock = new Map<number, number>(); // needle → row
   outer: for (let row = 0; row < height; row++) {
     const dir = program.direction[row];
     const yarn = program.yarnFeeder[row];
     const rack = program.racking[row];
     currentRacking = rack;
+    if (yarn != null) placedThisBlock = new Map();
 
     // Compressed mode counts rows per needle: a new loop's heads sit one
     // row above the loop it's knit through, so rows that don't touch a
@@ -237,9 +241,32 @@ export function generateTopology(
           lastHead.front[dest] = { j: lastHead.back[n].j, needle: dest };
           const moved = currentHeads.back[n];
           const deltaI = (dest - n) * 2;
+          // A loop returned to the front at a rack sweeps across the needles
+          // between its old and new positions. It passes over loops still on
+          // the back bed there, and under ones already returned to the front
+          // in this run of transfers — so in a cable, the group moved back
+          // first ends up on top. Loops moving in this same row shift
+          // together and don't cross each other.
+          let layer = 0;
+          if (rack !== 0) {
+            const lo = Math.min(n, dest);
+            const hi = Math.max(n, dest);
+            for (let m = lo; m <= hi; m++) {
+              const movingNow = program.ops.pixel(m, row) === Op.BTF;
+              if (backBed[m].length > 0 && !movingNow) layer = 1;
+            }
+            if (layer === 0) {
+              for (let m = lo; m <= hi; m++) {
+                const placedRow = placedThisBlock.get(m);
+                if (placedRow !== undefined && placedRow !== row) layer = -1;
+              }
+            }
+            placedThisBlock.set(dest, row);
+          }
           for (const idx of moved) {
             nodes[idx].bed = "front";
             nodes[idx].gridI += deltaI;
+            if (layer !== 0) nodes[idx].layer = layer;
           }
           currentHeads.front[dest] = moved;
           currentHeads.back[n] = [];
