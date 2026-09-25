@@ -9,7 +9,7 @@ interface BBox3DResult {
   center: number[];
 }
 
-export function bbox3d(points: number[]): BBox3DResult {
+export function bbox3d(points: ArrayLike<number>): BBox3DResult {
   let xMin = Infinity;
   let xMax = -Infinity;
 

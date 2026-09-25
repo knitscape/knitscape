@@ -100,3 +100,54 @@ export function buildYarnCurve(
   }
   return result;
 }
+
+// The t values buildYarnCurve steps through per segment, accumulated the same
+// way so the two agree point for point.
+function curveSteps(divisions: number): number[] {
+  const steps: number[] = [];
+  for (let t = 0; t < 1; t += 1 / divisions) steps.push(t);
+  return steps;
+}
+
+/**
+ * buildYarnCurve without its per-point allocations: the same curve, written
+ * into `out` when it has the right length (so a redraw allocates nothing) or
+ * into a new Float32Array.
+ */
+export function buildYarnCurveInto(
+  pts: ArrayLike<number>,
+  divisions = 5,
+  tension = 0.5,
+  out?: Float32Array
+): Float32Array {
+  const steps = curveSteps(divisions);
+  const segments = Math.max(0, Math.floor((pts.length - 9 + 2) / 3));
+  const length = segments * steps.length * 3;
+  if (!out || out.length !== length) out = new Float32Array(length);
+  const k = 1 - tension;
+  let o = 0;
+  for (let i = 0; i < pts.length - 9; i += 3) {
+    const p0x = pts[i], p0y = pts[i + 1], p0z = pts[i + 2];
+    const p1x = pts[i + 3], p1y = pts[i + 4], p1z = pts[i + 5];
+    const p2x = pts[i + 6], p2y = pts[i + 7], p2z = pts[i + 8];
+    const p3x = pts[i + 9], p3y = pts[i + 10], p3z = pts[i + 11];
+    const t01 = Math.sqrt((p1x - p0x) ** 2 + (p1y - p0y) ** 2 + (p1z - p0z) ** 2);
+    const t12 = Math.sqrt((p2x - p1x) ** 2 + (p2y - p1y) ** 2 + (p2z - p1z) ** 2);
+    const t23 = Math.sqrt((p3x - p2x) ** 2 + (p3y - p2y) ** 2 + (p3z - p2z) ** 2);
+    const m1x = k * (p2x - p1x + t12 * ((p1x - p0x) / t01 - (p2x - p0x) / (t01 + t12)));
+    const m1y = k * (p2y - p1y + t12 * ((p1y - p0y) / t01 - (p2y - p0y) / (t01 + t12)));
+    const m1z = k * (p2z - p1z + t12 * ((p1z - p0z) / t01 - (p2z - p0z) / (t01 + t12)));
+    const m2x = k * (p2x - p1x + t12 * ((p3x - p2x) / t23 - (p3x - p1x) / (t12 + t23)));
+    const m2y = k * (p2y - p1y + t12 * ((p3y - p2y) / t23 - (p3y - p1y) / (t12 + t23)));
+    const m2z = k * (p2z - p1z + t12 * ((p3z - p2z) / t23 - (p3z - p1z) / (t12 + t23)));
+    const ax = 2 * (p1x - p2x) + m1x + m2x, ay = 2 * (p1y - p2y) + m1y + m2y, az = 2 * (p1z - p2z) + m1z + m2z;
+    const bx = -3 * (p1x - p2x) - m1x - m1x - m2x, by = -3 * (p1y - p2y) - m1y - m1y - m2y, bz = -3 * (p1z - p2z) - m1z - m1z - m2z;
+    for (const t of steps) {
+      const t2 = t * t, t3 = t2 * t;
+      out[o++] = ax * t3 + bx * t2 + m1x * t + p1x;
+      out[o++] = ay * t3 + by * t2 + m1y * t + p1y;
+      out[o++] = az * t3 + bz * t2 + m1z * t + p1z;
+    }
+  }
+  return out;
+}

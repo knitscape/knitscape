@@ -34,7 +34,7 @@ export type ResolvedSegment = {
 // What the renderer consumes: one entry per yarn, with flat control points.
 export interface YarnData {
   yarnIndex: string;
-  pts: number[];
+  pts: ArrayLike<number>;
   diameter: number;
   color: number[];
 }

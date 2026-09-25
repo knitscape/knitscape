@@ -72,9 +72,25 @@ const HAIR_NONE = 2;
 const HAIR_FULL = 30;
 /**
  * Most flyaways drawn per yarn. A whole garment has millions at full density; past
- * this they thin evenly along the yarn so a close view of a big piece stays drawable.
+ * this they thin evenly so a close view of a big piece stays drawable.
  */
 const MAX_HAIRS = 2_000_000;
+/**
+ * Ply detail by the yarn's diameter on screen (or in the shadow map), in pixels:
+ * sides around each ply and centerline samples per row of the patch. Further off
+ * the plies are a few pixels across and a coarse tube shades the same.
+ */
+const PLY_LODS = [
+  { minPixels: 16, sides: PLY_SIDES, step: 1 },
+  { minPixels: 5, sides: 6, step: 2 },
+  { minPixels: 0, sides: 4, step: 4 },
+];
+/**
+ * Flyaway densities chunks are grouped by, as shares of full density: each group
+ * draws its top share and the shader drops the rest, so halving steps waste at
+ * most half the instances.
+ */
+const HAIR_BUCKETS = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1];
 /** Texture units: the shadow map is on 0. */
 const FRAME_UNITS = [1, 2, 3];
 
@@ -106,6 +122,8 @@ uniform int plies;
 uniform float plyPitch;
 
 layout(location = 0) in vec3 position;
+// Which PLY_CHUNK-sample stretch of the centerline this instance draws.
+layout(location = 1) in float chunkIndex;
 
 struct Frame { vec3 p; float s; vec3 t; vec3 n; vec3 b; };
 
@@ -216,8 +234,8 @@ out float vPly;
 out float vOutward;
 
 void main() {
-  int chunk = gl_InstanceID / plies;
-  int ply = gl_InstanceID - chunk * plies;
+  int chunk = int( chunkIndex );
+  int ply = gl_InstanceID - ( gl_InstanceID / plies ) * plies;
   Frame f = frameAt( chunk * PLY_CHUNK + int( position.y ) );
   float rPly, rCenter;
   plyLayout( rPly, rCenter );
@@ -336,8 +354,8 @@ const plyDepthVertexShader = /* glsl */ `${header}
 ${frames}
 
 void main() {
-  int chunk = gl_InstanceID / plies;
-  int ply = gl_InstanceID - chunk * plies;
+  int chunk = int( chunkIndex );
+  int ply = gl_InstanceID - ( gl_InstanceID / plies ) * plies;
   Frame f = frameAt( chunk * PLY_CHUNK + int( position.y ) );
   float rPly, rCenter;
   plyLayout( rPly, rCenter );
@@ -379,8 +397,11 @@ uniform float loopShare;
 uniform float hairWidth;
 uniform float hairCurl;
 uniform vec2 resolution;
-// The share of the flyaways drawn: the most any part of this yarn needs.
+// The share of the flyaways drawn: the most any part of this chunk needs.
 uniform float hairDrawn;
+// Flyaways per chunk at full density, and how many of them this draw takes.
+uniform int hairsPerChunk;
+uniform int hairsDrawnPerChunk;
 
 out vec3 vView;
 out vec3 vTangent;
@@ -399,8 +420,12 @@ float random() {
 }
 
 void main() {
-  state = uint( gl_InstanceID );
-  float anchor = random() * float( sampleCount - 1 );
+  // Seeded by the flyaway's place in its chunk, so it is the same one whichever
+  // chunks are drawn.
+  int chunk = int( chunkIndex );
+  int slot = gl_InstanceID - ( gl_InstanceID / hairsDrawnPerChunk ) * hairsDrawnPerChunk;
+  state = uint( chunk * hairsPerChunk + slot );
+  float anchor = min( float( chunk * ${PLY_CHUNK} ) + random() * ${PLY_CHUNK}.0, float( sampleCount - 1 ) );
   float diameter = 2.0 * radius;
   // Thinned by the yarn's size on screen where the flyaway is rooted, found before
   // anything else is fetched, to hairShare's share of all of them.
@@ -504,16 +529,18 @@ void main() {
 // ─── Instance patches ─────────────────────────────────────────────────────────
 
 // One ply over PLY_CHUNK intervals: x is the way around the ply (0 to 1, the seam
-// doubled so the fibre pattern does not wrap), y the centerline sample within the chunk.
-function plyPatch(): { position: Float32Array; index: Uint16Array } {
-  const ring = PLY_SIDES + 1;
-  const position = new Float32Array(ring * (PLY_CHUNK + 1) * 3);
-  for (let i = 0; i <= PLY_CHUNK; i++) {
-    for (let k = 0; k < ring; k++) position.set([k / PLY_SIDES, i, 0], (i * ring + k) * 3);
+// doubled so the fibre pattern does not wrap), y the centerline sample within the
+// chunk, every `step`-th of them.
+function plyPatch(sides: number, step: number): { position: Float32Array; index: Uint16Array } {
+  const ring = sides + 1;
+  const rows = PLY_CHUNK / step;
+  const position = new Float32Array(ring * (rows + 1) * 3);
+  for (let i = 0; i <= rows; i++) {
+    for (let k = 0; k < ring; k++) position.set([k / sides, i * step, 0], (i * ring + k) * 3);
   }
   const index: number[] = [];
-  for (let i = 0; i < PLY_CHUNK; i++) {
-    for (let k = 0; k < PLY_SIDES; k++) {
+  for (let i = 0; i < rows; i++) {
+    for (let k = 0; k < sides; k++) {
       const a = i * ring + k, b = a + 1, c = a + ring, d = c + 1;
       index.push(a, b, c, b, d, c);
     }
@@ -550,6 +577,8 @@ function makePatch(gl: WebGL2RenderingContext, data: { position: Float32Array; i
   const index = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data.index, gl.STATIC_DRAW);
+  // The chunk index, per instance; its buffer and divisor are set per draw.
+  gl.enableVertexAttribArray(1);
   gl.bindVertexArray(null);
   return { vao, count: data.index.length };
 }
@@ -568,6 +597,11 @@ class FiberYarn {
   /** Take every `step`-th point of the dense centerline the renderer samples. */
   readonly step: number;
   readonly count: number;
+  /** PLY_CHUNK-sample stretches of the centerline, and each one's bounding sphere (xyz, r). */
+  readonly chunkCount: number;
+  readonly chunkBounds: Float32Array;
+  /** Every chunk's index, for drawing the whole yarn (the shadow map). */
+  readonly allChunks: WebGLBuffer;
   length = 0;
   readonly min = [0, 0, 0];
   readonly max = [0, 0, 0];
@@ -601,6 +635,11 @@ class FiberYarn {
     this.step = Math.max(1, Math.floor((radius * fiberStyle.spacing) / Math.max(denseSpacing, 1e-9)));
     this.count = Math.floor((denseCount - 1) / this.step) + 1;
     this.rows = Math.ceil(this.count / TEXTURE_WIDTH);
+    this.chunkCount = Math.max(1, Math.ceil((this.count - 1) / PLY_CHUNK));
+    this.chunkBounds = new Float32Array(this.chunkCount * 4);
+    this.allChunks = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.allChunks);
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from({ length: this.chunkCount }, (_, i) => i), gl.STATIC_DRAW);
     const size = TEXTURE_WIDTH * this.rows * 4;
     this.centers = new Float32Array(size);
     this.tangents = new Float32Array(size);
@@ -723,6 +762,26 @@ class FiberYarn {
       r[b + 2] = rz / l;
     }
 
+    // Each chunk's bounding sphere, from the box round its samples.
+    const bounds = this.chunkBounds;
+    for (let k = 0; k < this.chunkCount; k++) {
+      let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+      const end = Math.min((k + 1) * PLY_CHUNK, n - 1);
+      for (let i = k * PLY_CHUNK; i <= end; i++) {
+        const x = c[i * 4], y = c[i * 4 + 1], z = c[i * 4 + 2];
+        if (x < x0) x0 = x;
+        if (y < y0) y0 = y;
+        if (z < z0) z0 = z;
+        if (x > x1) x1 = x;
+        if (y > y1) y1 = y;
+        if (z > z1) z1 = z;
+      }
+      bounds[k * 4] = (x0 + x1) / 2;
+      bounds[k * 4 + 1] = (y0 + y1) / 2;
+      bounds[k * 4 + 2] = (z0 + z1) / 2;
+      bounds[k * 4 + 3] = 0.5 * Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2) + this.radius;
+    }
+
     const gl = this.gl;
     [c, t, r].forEach((data, k) => {
       gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
@@ -746,17 +805,14 @@ class FiberYarn {
     gl.uniform1f(u.plyPitch, fiberStyle.plyPitch);
   }
 
-  /** Flyaways at full density. */
-  hairTotal(): number {
-    return Math.round((fiberStyle.fuzz * this.length) / (2 * this.radius));
-  }
-
-  plyInstances(): number {
-    return Math.ceil((this.count - 1) / PLY_CHUNK) * fiberStyle.plies;
+  /** Flyaways per chunk at full density. */
+  hairsPerChunk(): number {
+    return Math.round((fiberStyle.fuzz * PLY_CHUNK * this.sampleSpacing) / (2 * this.radius));
   }
 
   dispose(): void {
     for (const texture of this.textures) this.gl.deleteTexture(texture);
+    this.gl.deleteBuffer(this.allChunks);
   }
 }
 
@@ -767,8 +823,38 @@ export interface FiberFrame {
   projMatrix: number[];
   shadowViewMatrix: number[];
   shadowProjectionMatrix: number[];
+  /** Shadow map size, in texels. */
+  shadowSize: number;
   /** World-space direction toward the key light. */
   lightDir: number[];
+}
+
+function plyLod(pixels: number): number {
+  return PLY_LODS.findIndex((lod) => pixels >= lod.minPixels);
+}
+
+// The view frustum's six planes (xyz normal, w offset, inside positive), from the
+// combined projection and view matrices (Gribb and Hartmann).
+function frustumPlanes(proj: number[], view: number[]): Float64Array {
+  const m = new Float64Array(16);
+  for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 4; row++) {
+      let sum = 0;
+      for (let k = 0; k < 4; k++) sum += proj[k * 4 + row] * view[col * 4 + k];
+      m[col * 4 + row] = sum;
+    }
+  }
+  const planes = new Float64Array(24);
+  const rows = (i: number) => [m[i], m[4 + i], m[8 + i], m[12 + i]];
+  const r3 = rows(3);
+  [0, 0, 1, 1, 2, 2].forEach((axis, p) => {
+    const r = rows(axis);
+    const sign = p % 2 === 0 ? 1 : -1;
+    const a = r3[0] + sign * r[0], b = r3[1] + sign * r[1], c = r3[2] + sign * r[2], d = r3[3] + sign * r[3];
+    const l = Math.hypot(a, b, c) || 1;
+    planes.set([a / l, b / l, c / l, d / l], p * 4);
+  });
+  return planes;
 }
 
 /** Draws yarns at fibre level, given each one's dense centerline (xyz flat). */
@@ -776,8 +862,11 @@ export function createFiberRenderer(gl: WebGL2RenderingContext) {
   const ply = initShaderProgram(gl, plyVertexShader, plyFragmentShader) as any;
   const plyDepth = initShaderProgram(gl, plyDepthVertexShader, depthFragmentShader) as any;
   const hair = initShaderProgram(gl, hairVertexShader, hairFragmentShader) as any;
-  const plyPatchVAO = makePatch(gl, plyPatch());
+  const plyPatches = PLY_LODS.map((lod) => makePatch(gl, plyPatch(lod.sides, lod.step)));
   const hairVAO = makePatch(gl, hairRibbon());
+  // Chunk indices for this frame's draws, one list after another.
+  const instanceBuffer = gl.createBuffer()!;
+  let instances = new Float32Array(0);
   let yarns: FiberYarn[] = [];
 
   /** Rebuild for a new set of yarns. */
@@ -791,17 +880,31 @@ export function createFiberRenderer(gl: WebGL2RenderingContext) {
     dense.forEach((d, i) => yarns[i]?.update(d));
   }
 
-  /** Into the shadow map; the caller has it bound. */
+  // Draw `count` chunks from `buffer` (starting at chunk `first`) with `patch`,
+  // `perChunk` instances each.
+  function drawChunks(patch: Patch, buffer: WebGLBuffer, first: number, count: number, perChunk: number): void {
+    if (count === 0 || perChunk === 0) return;
+    gl.bindVertexArray(patch.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, first * 4);
+    gl.vertexAttribDivisor(1, perChunk);
+    gl.drawElementsInstanced(gl.TRIANGLES, patch.count, gl.UNSIGNED_SHORT, 0, count * perChunk);
+  }
+
+  /** Into the shadow map, every chunk, at the detail the map's texels need; the caller has it bound. */
   function drawDepth(frame: FiberFrame): void {
     const u = plyDepth.uniformLocations;
     gl.useProgram(plyDepth.program);
     gl.uniformMatrix4fv(u.viewMatrix, false, frame.shadowViewMatrix);
     gl.uniformMatrix4fv(u.projectionMatrix, false, frame.shadowProjectionMatrix);
-    gl.bindVertexArray(plyPatchVAO.vao);
+    // An orthographic map: texels per unit are the same everywhere.
+    const texelsPerUnit = (frame.shadowProjectionMatrix[0] * frame.shadowSize) / 2;
     for (const yarn of yarns) {
       yarn.bind(plyDepth);
-      gl.drawElementsInstanced(gl.TRIANGLES, plyPatchVAO.count, gl.UNSIGNED_SHORT, 0, yarn.plyInstances());
+      const patch = plyPatches[plyLod(2 * yarn.radius * texelsPerUnit)];
+      drawChunks(patch, yarn.allChunks, 0, yarn.chunkCount, fiberStyle.plies);
     }
+    gl.bindVertexArray(null);
   }
 
   function setLighting(program: any, frame: FiberFrame, yarn: FiberYarn): void {
@@ -826,26 +929,103 @@ export function createFiberRenderer(gl: WebGL2RenderingContext) {
     yarn.bind(program);
   }
 
-  // Draw only as many flyaways as the nearest part of the yarn needs; the shader thins
-  // them further where the yarn is further off. The nearest depth is at a corner of its
-  // bounds, depth being linear.
-  function hairsDrawn(yarn: FiberYarn, frame: FiberFrame, height: number): number {
+  // Per yarn, where each list of chunk indices starts and how long it is: a list
+  // per ply detail level, then one per flyaway density.
+  interface Lists {
+    plyStart: number[];
+    plyCount: number[];
+    hairStart: number[];
+    hairCount: number[];
+  }
+
+  // Per chunk, this frame: its ply detail level and flyaway group, -1 for none.
+  let plyClass = new Int8Array(0);
+  let hairClass = new Int8Array(0);
+
+  // Sort each yarn's chunks for this view: out of view, none; in view, the ply
+  // detail and flyaway density its nearest point needs. Written to `instances`
+  // and uploaded once. Runs every drawn frame over every chunk, so it is kept to
+  // plain arithmetic.
+  function sortChunks(frame: FiberFrame, height: number): Lists[] {
+    const f = frustumPlanes(frame.projMatrix, frame.viewMatrix);
     const v = frame.viewMatrix;
-    let near = Infinity;
-    for (let k = 0; k < 8; k++) {
-      const x = k & 1 ? yarn.max[0] : yarn.min[0];
-      const y = k & 2 ? yarn.max[1] : yarn.min[1];
-      const z = k & 4 ? yarn.max[2] : yarn.min[2];
-      near = Math.min(near, -(v[2] * x + v[6] * y + v[10] * z + v[14]));
+    const v2 = v[2], v6 = v[6], v10 = v[10], v14 = v[14];
+    const pixelsAtUnitDepth = (frame.projMatrix[5] * height) / 2;
+    let total = 0, most = 0;
+    for (const yarn of yarns) {
+      total += yarn.chunkCount;
+      most = Math.max(most, yarn.chunkCount);
     }
-    if (near <= 0) return 1;
-    const pixel = (2 / (frame.projMatrix[5] * height)) * near;
-    return hairShare((2 * yarn.radius) / pixel);
+    if (instances.length < 2 * total) instances = new Float32Array(2 * total);
+    if (plyClass.length < most) {
+      plyClass = new Int8Array(most);
+      hairClass = new Int8Array(most);
+    }
+    const lodPixels0 = PLY_LODS[0].minPixels, lodPixels1 = PLY_LODS[1].minPixels;
+    const buckets = HAIR_BUCKETS.length;
+    const lists: Lists[] = [];
+    let offset = 0;
+    for (const yarn of yarns) {
+      const b = yarn.chunkBounds;
+      const diameter = 2 * yarn.radius;
+      const hairMargin = fiberStyle.hairLength * diameter;
+      const hairsOn = fiberStyle.fuzz > 0;
+      const plyCount = PLY_LODS.map(() => 0);
+      const hairCount = HAIR_BUCKETS.map(() => 0);
+      for (let k = 0; k < yarn.chunkCount; k++) {
+        const x = b[k * 4], y = b[k * 4 + 1], z = b[k * 4 + 2], r = b[k * 4 + 3];
+        plyClass[k] = hairClass[k] = -1;
+        // Distance inside each plane; the chunk is out of view if it is further
+        // outside one than its bounds (and any flyaways) reach.
+        let inside = Infinity;
+        for (let p = 0; p < 24; p += 4) {
+          const d = f[p] * x + f[p + 1] * y + f[p + 2] * z + f[p + 3];
+          if (d < inside) inside = d;
+        }
+        if (inside < -r - hairMargin) continue;
+        const depth = Math.max(-(v2 * x + v6 * y + v10 * z + v14) - r, 0.1);
+        const pixels = (diameter * pixelsAtUnitDepth) / depth;
+        if (inside >= -r) {
+          const lod = pixels >= lodPixels0 ? 0 : pixels >= lodPixels1 ? 1 : 2;
+          plyClass[k] = lod;
+          plyCount[lod]++;
+        }
+        if (hairsOn && pixels > HAIR_NONE) {
+          const share = hairShare(pixels);
+          let bucket = 0;
+          while (bucket < buckets - 1 && share > HAIR_BUCKETS[bucket]) bucket++;
+          hairClass[k] = bucket;
+          hairCount[bucket]++;
+        }
+      }
+      const plyStart: number[] = [];
+      for (const count of plyCount) {
+        plyStart.push(offset);
+        offset += count;
+      }
+      const hairStart: number[] = [];
+      for (const count of hairCount) {
+        hairStart.push(offset);
+        offset += count;
+      }
+      const plyAt = [...plyStart];
+      const hairAt = [...hairStart];
+      for (let k = 0; k < yarn.chunkCount; k++) {
+        const lod = plyClass[k], bucket = hairClass[k];
+        if (lod >= 0) instances[plyAt[lod]++] = k;
+        if (bucket >= 0) instances[hairAt[bucket]++] = k;
+      }
+      lists.push({ plyStart, plyCount, hairStart, hairCount });
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, instances.subarray(0, offset), gl.DYNAMIC_DRAW);
+    return lists;
   }
 
   /** The plies and their flyaways; the caller has the shadow map on unit 0. */
   function draw(frame: FiberFrame): void {
     const width = gl.canvas.width, height = gl.canvas.height;
+    const lists = sortChunks(frame, height);
 
     gl.useProgram(ply.program);
     const pu = ply.uniformLocations;
@@ -853,11 +1033,12 @@ export function createFiberRenderer(gl: WebGL2RenderingContext) {
     gl.uniform1f(pu.fiberAngle, (fiberStyle.fiberAngle * Math.PI) / 180);
     gl.uniform1f(pu.fiberBump, fiberStyle.fiberBump);
     gl.uniform1f(pu.fiberLength, fiberStyle.fiberLength);
-    gl.bindVertexArray(plyPatchVAO.vao);
-    for (const yarn of yarns) {
+    yarns.forEach((yarn, i) => {
       setLighting(ply, frame, yarn);
-      gl.drawElementsInstanced(gl.TRIANGLES, plyPatchVAO.count, gl.UNSIGNED_SHORT, 0, yarn.plyInstances());
-    }
+      PLY_LODS.forEach((_, lod) =>
+        drawChunks(plyPatches[lod], instanceBuffer, lists[i].plyStart[lod], lists[i].plyCount[lod], fiberStyle.plies)
+      );
+    });
 
     gl.useProgram(hair.program);
     const hu = hair.uniformLocations;
@@ -866,19 +1047,27 @@ export function createFiberRenderer(gl: WebGL2RenderingContext) {
     gl.uniform1f(hu.hairWidth, fiberStyle.hairWidth);
     gl.uniform1f(hu.hairCurl, fiberStyle.hairCurl);
     gl.uniform2f(hu.resolution, width, height);
-    gl.bindVertexArray(hairVAO.vao);
     gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
     // Drawn after the yarn and not into the depth: a pixel-wide flyaway there only
     // adds noise to the ambient occlusion, which reads it.
     gl.depthMask(false);
-    for (const yarn of yarns) {
-      const drawn = hairsDrawn(yarn, frame, height);
-      const count = Math.min(Math.ceil(yarn.hairTotal() * drawn), MAX_HAIRS);
-      if (count === 0) continue;
+    yarns.forEach((yarn, i) => {
+      const perChunk = yarn.hairsPerChunk();
+      if (perChunk === 0) return;
+      // Each density group draws its share of every chunk's flyaways (the shader
+      // thins them further by where each is rooted), all thinned evenly past MAX_HAIRS.
+      const { hairStart, hairCount } = lists[i];
+      const wanted = HAIR_BUCKETS.reduce((sum, share, b) => sum + hairCount[b] * Math.ceil(perChunk * share), 0);
+      const thin = Math.min(1, MAX_HAIRS / Math.max(wanted, 1));
       setLighting(hair, frame, yarn);
-      gl.uniform1f(hu.hairDrawn, drawn);
-      gl.drawElementsInstanced(gl.TRIANGLES, hairVAO.count, gl.UNSIGNED_SHORT, 0, count);
-    }
+      gl.uniform1i(hu.hairsPerChunk, perChunk);
+      HAIR_BUCKETS.forEach((share, b) => {
+        const drawn = Math.max(1, Math.ceil(perChunk * share * thin));
+        gl.uniform1f(hu.hairDrawn, share);
+        gl.uniform1i(hu.hairsDrawnPerChunk, drawn);
+        drawChunks(hairVAO, instanceBuffer, hairStart[b], hairCount[b], drawn);
+      });
+    });
     gl.depthMask(true);
     gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
     gl.bindVertexArray(null);

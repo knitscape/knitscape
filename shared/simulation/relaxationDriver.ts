@@ -79,9 +79,7 @@ export function createRelaxationDriver(
 
     for (const yd of geometry.yarnData) {
       const arr = msg.pts[Number(yd.yarnIndex)];
-      // Float32Array → number[] because buildYarnCurve is typed for number[];
-      // the copy is cheap next to a tick.
-      if (arr) yd.pts = Array.from(arr);
+      if (arr) yd.pts = arr;
     }
     geometryDirty = true;
     currentAlpha = msg.alpha;

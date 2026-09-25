@@ -1,4 +1,4 @@
-import { buildYarnCurve } from "./spline";
+import { buildYarnCurveInto } from "./spline";
 import { bbox3d, initShaderProgram, resizeCanvasToDisplaySize } from "./webgl";
 import { createCamera3D } from "./camera";
 import { Mat4 } from "../mat4";
@@ -300,6 +300,15 @@ let yarns: any[] = [];
 // Fibre-level drawing (fiber.ts), in place of the toon strips when on. Its
 // yarns are rebuilt from the toon centerlines whenever those were replaced or
 // moved while it was off.
+// Frames are only drawn when something in them changed: the camera, the canvas,
+// the yarn or a setting. Otherwise the canvas keeps showing the last one. The
+// shadow map depends only on the yarn and the light, so moving the camera
+// doesn't redraw it either.
+let sceneChanged = true;
+let shadowStale = true;
+let lastView: any = null;
+let lastAspect = 0;
+
 let fiberMode = false;
 let fiber: FiberRenderer | null = null;
 let fiberStale = true;
@@ -316,9 +325,11 @@ const aoSettings: AOSettings = { ...DEFAULT_AO };
 
 function setAmbientOcclusion(settings: Partial<AOSettings>) {
   Object.assign(aoSettings, settings);
+  sceneChanged = true;
 }
 
 function setFiberMode(on: boolean) {
+  if (on !== fiberMode) sceneChanged = shadowStale = true;
   fiberMode = on;
 }
 
@@ -327,6 +338,8 @@ function setFiberStyle(style: Partial<FiberStyle>) {
   // The sample spacing is baked into each yarn's frames when it is built.
   if (style.spacing !== undefined && style.spacing !== fiberStyle.spacing) fiberStale = true;
   Object.assign(fiberStyle, style);
+  // Plies, twist and spacing change what casts shadows.
+  sceneChanged = shadowStale = true;
 }
 
 function fiberFrame(viewMatrix: any, projMatrix: any) {
@@ -337,18 +350,21 @@ function fiberFrame(viewMatrix: any, projMatrix: any) {
     );
     fiberStale = false;
     fiberMoved = false;
+    shadowStale = true;
   } else if (fiberMoved && performance.now() - fiberUpdatedAt >= 2 * fiberUpdateMs) {
     const start = performance.now();
     fiber.update(yarns.map((yarn) => yarn.splinePts));
     fiberUpdatedAt = performance.now();
     fiberUpdateMs = fiberUpdatedAt - start;
     fiberMoved = false;
+    shadowStale = true;
   }
   return {
     viewMatrix,
     projMatrix,
     shadowViewMatrix,
     shadowProjectionMatrix,
+    shadowSize: SHADOW_SIZE,
     lightDir: LIGHT_DIR,
   };
 }
@@ -584,11 +600,12 @@ function init(yarnData: any, canvas: HTMLCanvasElement, resetCamera = true) {
 
   yarns = [];
   fiberStale = true;
+  sceneChanged = shadowStale = true;
 
   yarnData.forEach((yarn: any) => {
     if (yarn.pts.length < 6) return;
 
-    const splinePts = new Float32Array(buildYarnCurve(yarn.pts, 12, 0));
+    const splinePts = buildYarnCurveInto(yarn.pts, 12, 0);
     const segmentCount = splinePts.length / 3 - 1;
     const joinCount = splinePts.length / 3 - 2;
 
@@ -635,38 +652,48 @@ function setDepthUniforms(program: any, viewMatrix: any, projMatrix: any, diamet
 
 function draw() {
   if (!gl) return;
-  resizeCanvasToDisplaySize(gl.canvas as HTMLCanvasElement);
+  const resized = resizeCanvasToDisplaySize(gl.canvas as HTMLCanvasElement);
 
   const canvas = gl.canvas as HTMLCanvasElement;
   const aspect = canvas.clientWidth / canvas.clientHeight;
-  const projMatrix = camera.projection(aspect);
   const viewMatrix = camera.viewMatrix;
-
-  // Shadow pass — render depth into shadowFB
-  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
-  gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.enable(gl.DEPTH_TEST);
-  gl.disable(gl.CULL_FACE);
-  gl.enable(gl.POLYGON_OFFSET_FILL);
-  gl.polygonOffset(4.0, 8.0);
+  if (!sceneChanged && !resized && viewMatrix === lastView && aspect === lastAspect) return;
+  sceneChanged = false;
+  lastView = viewMatrix;
+  lastAspect = aspect;
+  const projMatrix = camera.projection(aspect);
 
   const frame = fiberMode ? fiberFrame(viewMatrix, projMatrix) : null;
-  if (frame) {
-    fiber!.drawDepth(frame);
-  } else {
-    for (const yarn of yarns) {
-      setDepthUniforms(segmentDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
-      gl.bindVertexArray(yarn.segmentDepthVAO);
-      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, yarn.segmentCount);
+  // Fibre frames still catching up with the yarn: come back next frame.
+  if (fiberMoved) sceneChanged = true;
 
-      setDepthUniforms(joinDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
-      gl.bindVertexArray(yarn.joinDepthVAO);
-      gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
+  if (shadowStale) {
+    shadowStale = false;
+    // Shadow pass — render depth into shadowFB
+    gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFB);
+    gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(4.0, 8.0);
+
+    if (frame) {
+      fiber!.drawDepth(frame);
+    } else {
+      for (const yarn of yarns) {
+        setDepthUniforms(segmentDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
+        gl.bindVertexArray(yarn.segmentDepthVAO);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, yarn.segmentCount);
+
+        setDepthUniforms(joinDepthProgram, shadowViewMatrix, shadowProjectionMatrix, yarn.diameter);
+        gl.bindVertexArray(yarn.joinDepthVAO);
+        gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, yarn.joinCount);
+      }
     }
-  }
 
-  gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+  }
 
   // Main pass, into the occlusion's target when it is on.
   if (!ao) ao = createAmbientOcclusion(gl);
@@ -706,13 +733,16 @@ function drawToon(viewMatrix: any, projMatrix: any) {
 function updateYarnGeometry(yarnData: any) {
   yarnData.forEach((yarn: any, i: any) => {
     if (!yarns[i]) return;
-    const splinePts = new Float32Array(buildYarnCurve(yarn.pts, 12));
-    splinePts.forEach((v, j) => (yarns[i].splinePts[j] = v));
+    buildYarnCurveInto(yarn.pts, 12, 0.5, yarns[i].splinePts);
     gl.bindBuffer(gl.ARRAY_BUFFER, yarns[i].yarnBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, yarns[i].splinePts);
   });
+  sceneChanged = true;
   if (fiberMode && fiber && !fiberStale) fiberMoved = true;
-  else fiberStale = true;
+  else {
+    fiberStale = true;
+    shadowStale = true;
+  }
 }
 
 function fitCamera() {
