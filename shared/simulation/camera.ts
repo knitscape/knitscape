@@ -51,13 +51,14 @@ export function createCamera3D() {
   }
 
   function handlePointerDown(e: PointerEvent): void {
-    if (e.button !== 0) return;
+    // Left drag orbits; right drag (or shift + left drag) pans.
+    if (e.button !== 0 && e.button !== 2) return;
     const startAzimuth = azimuth;
     const startPolar = polar;
     const startTarget = [...target];
     const startX = e.clientX;
     const startY = e.clientY;
-    const panning = e.shiftKey;
+    const panning = e.shiftKey || e.button === 2;
 
     function move(e: PointerEvent): void {
       if (panning) {
@@ -103,14 +104,21 @@ export function createCamera3D() {
     update();
   }
 
+  // Right drag pans, so keep the browser menu from popping up over it.
+  function handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+  }
+
   function attach(canvas: HTMLCanvasElement): void {
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("contextmenu", handleContextMenu);
   }
 
   function detach(canvas: HTMLCanvasElement): void {
     canvas.removeEventListener("pointerdown", handlePointerDown);
     canvas.removeEventListener("wheel", handleWheel);
+    canvas.removeEventListener("contextmenu", handleContextMenu);
   }
 
   return {

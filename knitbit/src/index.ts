@@ -61,6 +61,7 @@ let state: AppState = {
   relaxSettings: { ...DEFAULT_RELAX_SETTINGS },
   simShowSettings: false,
   simAlpha: 1,
+  simMaximized: false,
 };
 
 let lastProgram: KnittingProgram | null = null;
@@ -658,6 +659,7 @@ const handlers: ViewHandlers = {
   },
   onToggleSimSettings: () =>
     setState({ simShowSettings: !state.simShowSettings }),
+  onToggleSimMaximized: () => setState({ simMaximized: !state.simMaximized }),
   onRelaxSettingChange: (key, value) => {
     (liveRelaxSettings[key] as number) = value as number;
     setState({ relaxSettings: { ...liveRelaxSettings } });
@@ -744,6 +746,9 @@ function init() {
       } else if (state.showScriptPicker) {
         e.preventDefault();
         setState({ showScriptPicker: false });
+      } else if (state.simMaximized) {
+        e.preventDefault();
+        setState({ simMaximized: false });
       }
     });
 

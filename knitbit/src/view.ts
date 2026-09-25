@@ -50,6 +50,7 @@ export interface AppState {
   relaxSettings: RelaxSettings;
   simShowSettings: boolean;
   simAlpha: number;
+  simMaximized: boolean;
 }
 
 export interface ViewHandlers {
@@ -88,6 +89,7 @@ export interface ViewHandlers {
   onDownloadJson: () => void;
   onDownloadScript: () => void;
   onToggleSimSettings: () => void;
+  onToggleSimMaximized: () => void;
   onRelaxSettingChange: <K extends keyof RelaxSettings>(
     key: K,
     value: RelaxSettings[K]
@@ -347,7 +349,10 @@ export function view(state: AppState, handlers: ViewHandlers) {
 
         <div
           id="preview-pane"
-          class="flex flex-col overflow-hidden min-w-0 bg-[var(--base1)]">
+          class=${`flex flex-col overflow-hidden min-w-0 bg-[var(--base1)] ${
+            // !w-auto beats the inline width split.js puts on the pane.
+            state.simMaximized ? "fixed inset-0 z-40 !w-auto" : ""
+          }`}>
           <div
             class="shrink-0 flex items-center justify-between gap-2 py-[0.3rem] px-3 bg-[var(--base1)] [border-bottom:1px_solid_var(--base3)]">
             <span
@@ -386,6 +391,15 @@ export function view(state: AppState, handlers: ViewHandlers) {
                 title="Fit view"
                 @click=${handlers.onFitCamera}>
                 <i class="fa-solid fa-expand"></i>
+              </button>
+              <button
+                class="flex items-center justify-center w-[1.5rem] h-[1.5rem] bg-[var(--base2)] border border-[color:var(--base4)] text-[0.75rem] rounded-[3px] text-[color:var(--base12)] cursor-pointer [transition:background_80ms] hover:bg-[var(--base4)]"
+                title=${state.simMaximized ? "Restore (Esc)" : "Maximize"}
+                @click=${handlers.onToggleSimMaximized}>
+                <i
+                  class=${`fa-solid ${
+                    state.simMaximized ? "fa-down-left-and-up-right-to-center" : "fa-up-right-and-down-left-from-center"
+                  }`}></i>
               </button>
               ${state.simState === "idle"
                 ? html`<button

@@ -99,15 +99,40 @@ export function generateTopology(
   // (they don't change state) and don't consume a step.
   let stitchCount = 0;
   let currentRacking = 0;
-  // Effective row index for compressed mode: counts non-transfer rows
-  // (yarn !== null). Transfer rows don't contribute vertical space.
-  let effectiveRow = 0;
+  const compressed = mode === "compressed";
+  // Compressed mode: needles whose held loop a yarn has floated past
+  // (MISS) since it was last knit, e.g. a slip stitch.
+  const missed = {
+    front: new Array<boolean>(width).fill(false),
+    back: new Array<boolean>(width).fill(false),
+  };
   outer: for (let row = 0; row < height; row++) {
     const dir = program.direction[row];
     const yarn = program.yarnFeeder[row];
     const rack = program.racking[row];
     currentRacking = rack;
-    if (yarn != null) effectiveRow++;
+
+    // Compressed mode counts rows per needle: a new loop's heads sit one
+    // row above the loop it's knit through, so rows that don't touch a
+    // needle (other carriers, held needles, transfer rows) add no height.
+    // The row's level is the highest head any of its stitches will make.
+    // A needle that fell behind because a yarn floated past it (a slip
+    // stitch) stretches its held loop up to meet the row, since the float
+    // pulls it along with its neighbors. A needle no yarn passed (EMPTY:
+    // held for short rows, or another carrier's section) keeps its height,
+    // so a short-row wedge shows up as a stepped edge, not long loops.
+    let rowLevel = 0;
+    if (compressed) {
+      for (let n = 0; n < width; n++) {
+        const op = program.ops.pixel(n, row);
+        // Empty needles have nothing to stretch, so they don't set the level.
+        if ((op === Op.FKNIT || op === Op.FTUCK) && frontBed[n].length > 0) {
+          rowLevel = Math.max(rowLevel, lastHead.front[n].j + 1);
+        } else if ((op === Op.BKNIT || op === Op.BTUCK) && backBed[n].length > 0) {
+          rowLevel = Math.max(rowLevel, lastHead.back[n].j + 1);
+        }
+      }
+    }
 
     // Traverse needles in carriage direction
     const needles =
@@ -131,14 +156,19 @@ export function generateTopology(
       // ── MISS / EMPTY: no needle action at this cell ──────────────────
       // MISS = yarn floats past; EMPTY = nothing happens at all (used in
       // transfer rows where most cells aren't transferring).
-      // In a non-transfer row the fabric still grows one row around this
-      // needle, so any loop currently held here should stretch up to the
-      // new row level. We mutate existing head nodes (and the lastHead
-      // tracker) so the NEXT knit on this needle has its legs right at
-      // the lifted heads — instead of reaching down across many rows.
+      // Technical: in a non-transfer row the fabric still grows one row
+      // around this needle, so any loop currently held here should stretch
+      // up to the new row level. We mutate existing head nodes (and the
+      // lastHead tracker) so the NEXT knit on this needle has its legs
+      // right at the lifted heads — instead of reaching down across many
+      // rows. Compressed mode defers this to the next knit (see rowLevel).
       if (op === Op.MISS || op === Op.EMPTY) {
-        if (yarn != null) {
-          const liftTarget = mode === "compressed" ? effectiveRow : row + 1;
+        if (yarn != null && compressed && op === Op.MISS) {
+          if (frontBed[n].length > 0) missed.front[n] = true;
+          if (backBed[n].length > 0) missed.back[n] = true;
+        }
+        if (yarn != null && !compressed) {
+          const liftTarget = row + 1;
           for (const bed of ["front", "back"] as const) {
             const heads = currentHeads[bed][n];
             if (heads.length === 0) continue;
@@ -158,14 +188,14 @@ export function generateTopology(
       // ── Drops: remove the loop head from the specified bed ──────────
       if (op === Op.FDROP) {
         frontBed[n] = [];
-        lastHead.front[n] = { j: row + 1, needle: n };
+        lastHead.front[n] = { j: compressed ? lastHead.front[n].j : row + 1, needle: n };
         currentHeads.front[n] = [];
         stitchCount++;
         continue;
       }
       if (op === Op.BDROP) {
         backBed[n] = [];
-        lastHead.back[n] = { j: row + 1, needle: n };
+        lastHead.back[n] = { j: compressed ? lastHead.back[n].j : row + 1, needle: n };
         currentHeads.back[n] = [];
         stitchCount++;
         continue;
@@ -193,6 +223,8 @@ export function generateTopology(
           }
           currentHeads.back[dest] = moved;
           currentHeads.front[n] = [];
+          missed.back[dest] = missed.front[n];
+          missed.front[n] = false;
         }
         stitchCount++;
         continue;
@@ -211,6 +243,8 @@ export function generateTopology(
           }
           currentHeads.front[dest] = moved;
           currentHeads.back[n] = [];
+          missed.front[dest] = missed.back[n];
+          missed.back[n] = false;
         }
         stitchCount++;
         continue;
@@ -229,11 +263,23 @@ export function generateTopology(
       // position so the peak of the loop shows the lateral displacement,
       // while the legs anchor at the current needle.
       const prev = lastHead[bed][n];
-      const legRow = prev.j;
+      const hasPrevLoop = bedArray[n].length > 0;
+      let legRow = prev.j;
+      // Compressed: a slipped loop that fell behind the row stretches up
+      // to meet it (see rowLevel).
+      if (compressed && hasPrevLoop && missed[bed][n] && legRow < rowLevel - 1) {
+        legRow = rowLevel - 1;
+        for (const idx of currentHeads[bed][n]) nodes[idx].gridJ = legRow;
+      }
+      missed[bed][n] = false;
       // Technical: heads at current program row (shows time evolution).
-      // Compressed: heads at the effective row — program rows collapsed
-      // so transfer rows (yarn === null) take no vertical space.
-      const headRow = mode === "compressed" ? effectiveRow : row + 1;
+      // Compressed: heads one row above the loop they're knit through; a
+      // knit onto an empty needle has no loop below, so it joins the row.
+      const headRow = !compressed
+        ? row + 1
+        : hasPrevLoop
+          ? legRow + 1
+          : Math.max(rowLevel, legRow + 1);
 
       // Sub-needle positions for legs (current needle — where stitch anchors)
       const iFirst = dir === "right" ? 2 * n : 2 * n + 1;
@@ -250,7 +296,6 @@ export function generateTopology(
         // pointelle, or first-row knits with no cast-on), there's nothing
         // to interlock with, so skip the legs entirely — the yarn just
         // lays a floating head across the needle.
-        const hasPrevLoop = bedArray[n].length > 0;
         const head1 = addNode(headFirst, headRow, row, bed, false);
         const head2 = addNode(headSecond, headRow, row, bed, false);
         if (hasPrevLoop) {
@@ -271,7 +316,7 @@ export function generateTopology(
         // existing loop's heads. It doesn't form a new loop — it just
         // rides on top, physically lifting the existing heads to sit
         // with the tuck. newJ matches the knit's headRow for this mode.
-        const newJ = mode === "compressed" ? effectiveRow : prev.j + 1;
+        const newJ = compressed ? headRow : prev.j + 1;
         for (const idx of currentHeads[bed][n]) {
           nodes[idx].gridJ = newJ;
         }

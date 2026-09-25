@@ -15,11 +15,13 @@ uniform mat4 projectionMatrix;
 uniform mat4 shadowViewMatrix;
 uniform mat4 shadowProjectionMatrix;
 uniform float uWidth;
-uniform vec3 uLightPos;
+uniform vec3 uLightDir;
+uniform float uViewportHeight;
 
 varying float across;
 varying vec4 vLightNDC;
 varying float vFacing;
+varying float vPixelWidth;
 
 const mat4 depthScaleMatrix = mat4(
     0.5, 0, 0, 0,
@@ -27,6 +29,21 @@ const mat4 depthScaleMatrix = mat4(
     0, 0, 0.5, 0,
     0.5, 0.5, 0.5, 1
 );
+
+// Yarn narrower than MIN_YARN_PX on screen is drawn wider (up to
+// MAX_WIDEN×) so that when zoomed out the fabric reads as solid rather than
+// a fine yarn/gap pattern that aliases into moiré.
+const float MIN_YARN_PX = 3.0;
+const float MAX_WIDEN = 2.5;
+
+// On-screen diameter in pixels of a yarn at view-space depth z.
+float pixelWidth(float z) {
+  return uWidth * projectionMatrix[1][1] * 0.5 * uViewportHeight / max(-z, 1e-4);
+}
+
+float drawnWidth(float px) {
+  return uWidth * clamp(MIN_YARN_PX / max(px, 1e-4), 1.0, MAX_WIDEN);
+}
 
 void main() {
   vec4 p0 = modelViewMatrix * vec4(pointA, 1.0);
@@ -36,7 +53,9 @@ void main() {
   vec2 normal = normalize(vec2(-tangent.y, tangent.x));
 
   vec4 currentPoint = mix(p0, p1, position.x);
-  vec2 pt = currentPoint.xy + uWidth * (position.x * tangent + position.y * normal);
+  vPixelWidth = pixelWidth(currentPoint.z);
+  float width = drawnWidth(vPixelWidth);
+  vec2 pt = currentPoint.xy + uWidth * position.x * tangent + width * position.y * normal;
 
   vec4 mvPosition = vec4(pt, currentPoint.z, 1.0);
   gl_Position = projectionMatrix * mvPosition;
@@ -45,8 +64,7 @@ void main() {
   vec4 worldPoint = modelMatrix * vec4(mix(pointA, pointB, position.x), 1.0);
   vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * worldPoint;
 
-  vec3 lightDirView = normalize((modelViewMatrix * vec4(uLightPos, 1.0)).xyz - mvPosition.xyz);
-  vFacing = lightDirView.z;
+  vFacing = normalize((modelViewMatrix * vec4(uLightDir, 0.0)).xyz).z;
 }
 `;
 
@@ -60,12 +78,11 @@ uniform sampler2D tShadow;
 varying float across;
 varying vec4 vLightNDC;
 varying float vFacing;
+varying float vPixelWidth;
 
 float unpackRGBA(vec4 v) {
     return dot(v, 1.0 / vec4(1.0, 255.0, 65025.0, 16581375.0));
 }
-
-vec3 normal = vec3(0.0, 0.0, 1.0);
 
 void main() {
     vec3 lightPos = vLightNDC.xyz / vLightNDC.w;
@@ -89,9 +106,14 @@ void main() {
     float facing = smoothstep(-0.1, 0.3, vFacing);
     float shadow = mix(0.6, 1.0, min(lit / 9.0, facing));
 
-    vec3 highlight = normalize(vec3(0.0, across * 2., 0.4));
-    float outline = dot(normal, highlight);
-    outline = step(0.4, outline);
+    // Dark outline along the yarn's edges: the band past OUTLINE_START
+    // (in units of yarn diameter from the centerline). A hard step aliases
+    // into moiré once the band is under a pixel, so blend it over one
+    // pixel, and fade it out entirely as the yarn shrinks on screen.
+    const float OUTLINE_START = 0.458;
+    float px = 1.0 / max(vPixelWidth, 1e-3);
+    float outline = 1.0 - smoothstep(OUTLINE_START - 0.5 * px, OUTLINE_START + 0.5 * px, abs(across));
+    outline = mix(1.0, outline, smoothstep(4.0, 16.0, vPixelWidth));
 
     gl_FragColor.rgb = uColor * outline * shadow;
     gl_FragColor.a = 1.0;
@@ -112,11 +134,13 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat4 shadowViewMatrix;
 uniform mat4 shadowProjectionMatrix;
-uniform vec3 uLightPos;
+uniform vec3 uLightDir;
+uniform float uViewportHeight;
 
 varying float across;
 varying vec4 vLightNDC;
 varying float vFacing;
+varying float vPixelWidth;
 
 const mat4 depthScaleMatrix = mat4(
     0.5, 0, 0, 0,
@@ -124,6 +148,21 @@ const mat4 depthScaleMatrix = mat4(
     0, 0, 0.5, 0,
     0.5, 0.5, 0.5, 1
 );
+
+// Yarn narrower than MIN_YARN_PX on screen is drawn wider (up to
+// MAX_WIDEN×) so that when zoomed out the fabric reads as solid rather than
+// a fine yarn/gap pattern that aliases into moiré.
+const float MIN_YARN_PX = 3.0;
+const float MAX_WIDEN = 2.5;
+
+// On-screen diameter in pixels of a yarn at view-space depth z.
+float pixelWidth(float z) {
+  return uWidth * projectionMatrix[1][1] * 0.5 * uViewportHeight / max(-z, 1e-4);
+}
+
+float drawnWidth(float px) {
+  return uWidth * clamp(MIN_YARN_PX / max(px, 1e-4), 1.0, MAX_WIDEN);
+}
 
 void main() {
   vec4 clipA = modelViewMatrix * vec4(pointA, 1.0);
@@ -140,8 +179,10 @@ void main() {
 
   float sigma = sign(dot(ab + cb, normal));
 
-  vec2 p0 = 0.5 * sigma * uWidth * (sigma < 0.0 ? abn : cbn);
-  vec2 p1 = 0.5 * sigma * uWidth * (sigma < 0.0 ? cbn : abn);
+  vPixelWidth = pixelWidth(clipB.z);
+  float width = drawnWidth(vPixelWidth);
+  vec2 p0 = 0.5 * sigma * width * (sigma < 0.0 ? abn : cbn);
+  vec2 p1 = 0.5 * sigma * width * (sigma < 0.0 ? cbn : abn);
 
   vec2 clip = clipB.xy + position.x * p0 + position.y * p1;
   vec4 mvPosition = vec4(clip, clipB.z, clipB.w);
@@ -152,8 +193,7 @@ void main() {
   vec4 worldPoint = modelMatrix * vec4(pointB, 1.0);
   vLightNDC = depthScaleMatrix * shadowProjectionMatrix * shadowViewMatrix * worldPoint;
 
-  vec3 lightDirView = normalize((modelViewMatrix * vec4(uLightPos, 1.0)).xyz - mvPosition.xyz);
-  vFacing = lightDirView.z;
+  vFacing = normalize((modelViewMatrix * vec4(uLightDir, 0.0)).xyz).z;
 }
 `;
 
@@ -244,7 +284,10 @@ let lastBbox: any;
 let segmentProgram: any, joinProgram: any, segmentDepthProgram: any, joinDepthProgram: any;
 let shadowFB: any, shadowTexture: any;
 let shadowViewMatrix: any, shadowProjectionMatrix: any;
-let lightWorldPos: number[] = [0, 0, 25];
+// Direction toward the light (world space). A directional light shades the
+// whole fabric evenly regardless of its size; a nearby point light would
+// graze across large pieces and shade one side differently from the other.
+const LIGHT_DIR = normalize3([-1, 1, 4]);
 
 // Segment instance geometry VAO (shared, non-instanced part)
 let segmentGeoBuffer: any, joinGeoBuffer: any;
@@ -388,10 +431,20 @@ function buildJoinDepthVAO(yarnBuffer: any) {
   return vao;
 }
 
+function normalize3(v: number[]): number[] {
+  const len = Math.hypot(v[0], v[1], v[2]);
+  return [v[0] / len, v[1] / len, v[2] / len];
+}
+
 function computeLightMatrices(bbox: any) {
-  const lightPos = [bbox.xMin, bbox.yMax, 25];
-  lightWorldPos = lightPos;
+  // Shadow camera sits back along LIGHT_DIR, far enough to clear the scene.
   const lightTarget = bbox.center;
+  const reach = Math.hypot(
+    bbox.xMax - bbox.xMin,
+    bbox.yMax - bbox.yMin,
+    bbox.zMax - bbox.zMin
+  );
+  const lightPos = lightTarget.map((c: number, i: number) => c + LIGHT_DIR[i] * reach);
   const lightCameraMatrix = Mat4.lookAt(lightPos, lightTarget, [0, 1, 0]);
   shadowViewMatrix = Mat4.inverse(lightCameraMatrix);
 
@@ -507,7 +560,8 @@ function setMainUniforms(program: any, viewMatrix: any, projMatrix: any, color: 
   gl.uniformMatrix4fv(u.shadowProjectionMatrix, false, shadowProjectionMatrix);
   gl.uniform1f(u.uWidth, diameter);
   gl.uniform3fv(u.uColor, color);
-  gl.uniform3fv(u.uLightPos, lightWorldPos);
+  gl.uniform3fv(u.uLightDir, LIGHT_DIR);
+  gl.uniform1f(u.uViewportHeight, gl.canvas.height);
 }
 
 function setDepthUniforms(program: any, viewMatrix: any, projMatrix: any, diameter: any) {
